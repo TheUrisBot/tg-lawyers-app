@@ -1,0 +1,410 @@
+<section class="page" aria-labelledby="tasks-title">
+  <h1 id="tasks-title">Задачи</h1>
+
+  <!-- Форма создания/редактирования задачи -->
+  <div class="card">
+    <form id="task-form">
+      <div style="display:grid; gap:8px;">
+
+        <!-- Выбор дела -->
+        <div style="display:grid; gap:4px;">
+          <label for="t_caseId">Дело *</label>
+          <select id="t_caseId" name="caseId" required>
+            <option value="">Выберите дело…</option>
+          </select>
+          <div id="t_caseHint" style="font-size:12px; color:var(--muted); display:none;"></div>
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_title">Название задачи *</label>
+          <input id="t_title" name="title" type="text" required placeholder="Подготовить заявление, собрать документы..." />
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_due">Срок (дата)</label>
+          <input id="t_due" name="dueDate" type="date" />
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_time">Время</label>
+          <input id="t_time" name="dueTime" type="time" />
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_priority">Приоритет</label>
+          <select id="t_priority" name="priority">
+            <option value="">—</option>
+            <option value="low">Низкий</option>
+            <option value="normal" selected>Обычный</option>
+            <option value="high">Высокий</option>
+            <option value="urgent">Срочно</option>
+          </select>
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_status">Статус</label>
+          <select id="t_status" name="status">
+            <option value="todo" selected>К выполнению</option>
+            <option value="inprogress">В работе</option>
+            <option value="blocked">Заблокировано</option>
+            <option value="done">Выполнено</option>
+          </select>
+        </div>
+
+        <div style="display:grid; gap:4px;">
+          <label for="t_note">Примечание</label>
+          <textarea id="t_note" name="note" rows="3" placeholder="Детали, ссылки, кто отвечает и т.д."></textarea>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
+          <button type="submit" style="border:1px solid var(--divider); border-radius:10px; padding:8px 12px; background:transparent; color:var(--fg); cursor:pointer;">
+            Сохранить задачу
+          </button>
+          <button type="button" id="t_reset" style="border:1px solid var(--divider); border-radius:10px; padding:8px 12px; background:transparent; color:var(--fg); cursor:pointer;">
+            Очистить форму
+          </button>
+        </div>
+
+        <!-- скрытое поле для режима редактирования -->
+        <input type="hidden" id="t_editingId" />
+      </div>
+    </form>
+  </div>
+
+  <!-- Поиск и список задач -->
+  <div class="card">
+    <div style="display:grid; gap:8px;">
+      <input id="t_search" type="search" placeholder="Поиск по делу / должнику / названию задачи" />
+      <div id="t_empty" style="display:none; color:var(--muted);">Пока нет задач. Добавьте первую выше.</div>
+      <div id="tasks-list" style="display:grid; gap:8px;"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const STORAGE_KEY = "tasks:list:v1";
+  const CASES_KEY   = "cases:list:v1";
+
+  const form       = document.getElementById("task-form");
+  const editingEl  = document.getElementById("t_editingId");
+  const listEl     = document.getElementById("tasks-list");
+  const emptyEl    = document.getElementById("t_empty");
+  const searchEl   = document.getElementById("t_search");
+  const caseSelect = document.getElementById("t_caseId");
+  const caseHint   = document.getElementById("t_caseHint");
+
+  const f = {
+    caseId:   caseSelect,
+    title:    document.getElementById("t_title"),
+    dueDate:  document.getElementById("t_due"),
+    dueTime:  document.getElementById("t_time"),
+    priority: document.getElementById("t_priority"),
+    status:   document.getElementById("t_status"),
+    note:     document.getElementById("t_note"),
+  };
+
+  // --- CASES: чтение из localStorage (вкладка «Дела») ---
+  function loadCases() {
+    try {
+      const raw = localStorage.getItem(CASES_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+  function getCaseById(id) {
+    return loadCases().find(c => c.id === id);
+  }
+  function caseLabel(c) {
+    const cn = c.caseNumber || "Без номера";
+    const dn = c.debtorName ? ` — ${c.debtorName}` : "";
+    return `${cn}${dn}`;
+  }
+  function populateCaseSelect(selectedId) {
+    const cases = loadCases().slice().sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+    caseSelect.innerHTML = '<option value="">Выберите дело…</option>';
+    cases.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = caseLabel(c);
+      if (selectedId && selectedId === c.id) opt.selected = true;
+      caseSelect.appendChild(opt);
+    });
+
+    if (!cases.length) {
+      caseHint.style.display = "block";
+      caseHint.textContent = "Нет дел. Откройте вкладку «Дела» и добавьте хотя бы одно.";
+      caseSelect.disabled = true;
+    } else {
+      caseHint.style.display = "none";
+      caseSelect.disabled = false;
+    }
+  }
+
+  // --- TASKS storage ---
+  function loadAll() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+  function saveAll(items) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }
+
+  // --- Helpers ---
+  function uid() {
+    return "t_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  function toISO(dateStr, timeStr) {
+    if (!dateStr) return null;
+    const t = timeStr && /^\d{2}:\d{2}$/.test(timeStr) ? timeStr : "00:00";
+    return `${dateStr}T${t}`;
+  }
+  function formatDateTime(isoLocal) {
+    if (!isoLocal) return "—";
+    try {
+      const [d, t=""] = isoLocal.split("T");
+      const [y,m,day] = d.split("-").map(Number);
+      const [hh="00",mm="00"] = t.split(":");
+      return `${String(day).padStart(2,"0")}.${String(m).padStart(2,"0")}.${y}${t ? " " + hh + ":" + mm : ""}`;
+    } catch { return isoLocal; }
+  }
+  function formatTs(ms) {
+    if (!ms && ms !== 0) return "—";
+    try {
+      const dt = new Date(ms);
+      const y  = dt.getFullYear();
+      const m  = String(dt.getMonth()+1).padStart(2,"0");
+      const d  = String(dt.getDate()).padStart(2,"0");
+      const hh = String(dt.getHours()).padStart(2,"0");
+      const mm = String(dt.getMinutes()).padStart(2,"0");
+      return `${d}.${m}.${y} ${hh}:${mm}`;
+    } catch { return String(ms); }
+  }
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+  function statusLabel(v) {
+    switch (v) {
+      case "todo":       return "К выполнению";
+      case "inprogress": return "В работе";
+      case "blocked":    return "Заблокировано";
+      case "done":       return "Выполнено";
+      default:           return "—";
+    }
+  }
+  function priorityLabel(v) {
+    switch (v) {
+      case "low":    return "Низкий";
+      case "normal": return "Обычный";
+      case "high":   return "Высокий";
+      case "urgent": return "Срочно";
+      default:       return "—";
+    }
+  }
+
+  // --- Render ---
+  function render(filter = "") {
+    const q = filter.trim().toLowerCase();
+    const items = loadAll();
+
+    const filtered = q
+      ? items.filter(it => {
+          const c = getCaseById(it.caseId) || { caseNumber: it.caseNumber || "", debtorName: it.debtorName || "" };
+          return (c.caseNumber || "").toLowerCase().includes(q) ||
+                 (c.debtorName || "").toLowerCase().includes(q) ||
+                 (it.title || "").toLowerCase().includes(q) ||
+                 (it.note || "").toLowerCase().includes(q);
+        })
+      : items;
+
+    listEl.innerHTML = "";
+    emptyEl.style.display = filtered.length ? "none" : "block";
+
+    // Сортировка: ближайший дедлайн выше; без дедлайна — внизу; внутри — по updatedAt desc
+    filtered
+      .slice()
+      .sort((a, b) => {
+        const av = a.when || "";
+        const bv = b.when || "";
+        if (av && bv) return av.localeCompare(bv) || (b.updatedAt - a.updatedAt);
+        if (av) return -1;
+        if (bv) return 1;
+        return (b.updatedAt - a.updatedAt);
+      })
+      .forEach(it => {
+        const linkedCase = getCaseById(it.caseId);
+        const label = linkedCase ? caseLabel(linkedCase)
+                                 : (it.caseNumber || it.debtorName ? `${it.caseNumber || "Без номера"}${it.debtorName ? " — " + it.debtorName : ""}` : "Дело не найдено");
+
+        const card = document.createElement("div");
+        card.style.border = "1px solid var(--divider)";
+        card.style.borderRadius = "12px";
+        card.style.padding = "10px";
+        card.style.background = "var(--surface)";
+        card.style.display = "grid";
+        card.style.gap = "6px";
+
+        const head = document.createElement("div");
+        head.style.display = "flex";
+        head.style.justifyContent = "space-between";
+        head.style.gap = "8px";
+        head.style.alignItems = "baseline";
+        head.innerHTML = `
+          <div style="font-weight:600">${escapeHtml(it.title || "Без названия")}</div>
+          <div style="font-size:12px; color:var(--muted)">${escapeHtml(statusLabel(it.status))}</div>
+        `;
+
+        const meta = document.createElement("div");
+        meta.style.fontSize = "14px";
+        meta.style.color = "var(--fg)";
+        meta.innerHTML = `
+          <div><strong>Дело:</strong> ${escapeHtml(label)}</div>
+          <div><strong>Срок:</strong> ${escapeHtml(formatDateTime(it.when))}</div>
+          <div><strong>Поставлена:</strong> ${escapeHtml(formatTs(it.createdAt))}</div>
+          ${(it.priority ? `<div><strong>Приоритет:</strong> ${escapeHtml(priorityLabel(it.priority))}</div>` : "")}
+          ${it.note ? `<div style="color:var(--muted)">${escapeHtml(it.note)}</div>` : ""}
+          ${!linkedCase && (it.caseNumber || it.debtorName) ? `<div style="color:var(--muted)">Привязано к делу (снимок): ${escapeHtml((it.caseNumber || "Без номера") + (it.debtorName ? " — " + it.debtorName : ""))}</div>` : ""}
+          ${!linkedCase && !(it.caseNumber || it.debtorName) ? `<div style="color:var(--muted)">Внимание: исходное дело было удалено.</div>` : ""}
+        `;
+
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "8px";
+        actions.style.marginTop = "4px";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.dataset.action = "edit";
+        editBtn.dataset.id = it.id;
+        editBtn.style.border = "1px solid var(--divider)";
+        editBtn.style.borderRadius = "10px";
+        editBtn.style.padding = "6px 10px";
+        editBtn.style.background = "transparent";
+        editBtn.style.color = "var(--fg)";
+        editBtn.style.cursor = "pointer";
+        editBtn.textContent = "Редактировать";
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.dataset.action = "delete";
+        delBtn.dataset.id = it.id;
+        delBtn.style.border = "1px solid var(--divider)";
+        delBtn.style.borderRadius = "10px";
+        delBtn.style.padding = "6px 10px";
+        delBtn.style.background = "transparent";
+        delBtn.style.color = "var(--fg)";
+        delBtn.style.cursor = "pointer";
+        delBtn.textContent = "Удалить";
+
+        actions.append(editBtn, delBtn);
+        card.append(head, meta, actions);
+        listEl.appendChild(card);
+      });
+  }
+
+  // Делегирование кликов
+  listEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+    if (action === "edit") loadIntoForm(id);
+    else if (action === "delete") removeTask(id);
+  });
+
+  // --- CRUD ---
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const caseId = f.caseId.value.trim();
+    if (!caseId) {
+      alert("Выберите дело.");
+      return;
+    }
+    const linked = getCaseById(caseId);
+    if (!linked) {
+      alert("Выбранное дело не найдено. Обновите список дел.");
+      return;
+    }
+
+    const data = {
+      caseId,
+      // Снимок для устойчивости
+      caseNumber: linked.caseNumber || "",
+      debtorName: linked.debtorName || "",
+
+      title:    f.title.value.trim(),
+      dueDate:  f.dueDate.value,
+      dueTime:  f.dueTime.value,
+      priority: f.priority.value,
+      status:   f.status.value,
+      note:     f.note.value.trim(),
+    };
+
+    if (!data.title) {
+      alert("Введите название задачи.");
+      return;
+    }
+
+    const id   = editingEl.value || uid();
+    const now  = Date.now();
+    const list = loadAll();
+    const idx  = list.findIndex(x => x.id === id);
+
+    const when = toISO(data.dueDate, data.dueTime);
+    const record = { id, ...data, when, updatedAt: now, createdAt: list[idx]?.createdAt || now };
+
+    if (idx >= 0) list[idx] = record; else list.push(record);
+    saveAll(list);
+
+    clearForm();
+    render(searchEl.value);
+  });
+
+  document.getElementById("t_reset").addEventListener("click", clearForm);
+
+  function clearForm() {
+    form.reset();
+    editingEl.value = "";
+    populateCaseSelect();
+  }
+
+  function loadIntoForm(id) {
+    const it = loadAll().find(x => x.id === id);
+    if (!it) return;
+
+    populateCaseSelect(it.caseId);
+    f.title.value    = it.title || "";
+    f.dueDate.value  = it.dueDate || "";
+    f.dueTime.value  = it.dueTime || "";
+    f.priority.value = it.priority || "";
+    f.status.value   = it.status || "todo";
+    f.note.value     = it.note || "";
+    editingEl.value  = it.id;
+
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function removeTask(id) {
+    if (!confirm("Удалить задачу?")) return;
+    const next = loadAll().filter(x => x.id !== id);
+    saveAll(next);
+    if (editingEl.value === id) clearForm();
+    render(searchEl.value);
+  }
+
+  // Поиск
+  searchEl.addEventListener("input", () => render(searchEl.value));
+
+  // Первичная инициализация
+  populateCaseSelect();
+  render();
+})();
+</script>

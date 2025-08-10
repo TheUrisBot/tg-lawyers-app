@@ -1,0 +1,73 @@
+:root {
+  --bg: #0f0f0f;
+  --fg: #f2f2f2;
+  --muted: #b5b5b5;
+  --accent: #4da3ff;
+  --surface: rgba(255,255,255,0.03); /* добавили */
+  --divider: rgba(255,255,255,0.08);
+}
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+#app {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+#content {
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+/* Нижняя навигация */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--surface);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid var(--divider);
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+.tab-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  padding: 12px 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  color: var(--fg);
+  border-top: 2px solid var(--accent);
+}
+
+/* Контент страниц */
+.page { display: grid; gap: 12px; }
+
+.page h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.card {
+  border: 1px solid var(--divider);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface);
+}

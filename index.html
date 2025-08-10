@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Юр.Мини‑апп — Банкротство</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Контент вкладок сюда подгружается -->
+    <main id="content" role="main" aria-live="polite"></main>
+
+    <!-- Нижняя навигация -->
+    <nav class="tabbar" role="tablist" aria-label="Нижняя навигация">
+      <button class="tab-btn active" data-page="cases" aria-selected="true" role="tab">Дела</button>
+      <button class="tab-btn" data-page="hearings" role="tab">Заседания</button>
+      <button class="tab-btn" data-page="tasks" role="tab">Задачи</button>
+      <button class="tab-btn" data-page="profile" role="tab">Профиль</button>
+    </nav>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
