@@ -3,17 +3,20 @@
   --fg: #f2f2f2;
   --muted: #b5b5b5;
   --accent: #4da3ff;
-  --surface: rgba(255,255,255,0.03); /* добавили */
+  --surface: rgba(255,255,255,0.03);
   --divider: rgba(255,255,255,0.08);
+  --control-bg: var(--surface);
 }
 
 html, body { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--bg);           /* ← фон страницы как раньше */
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  color-scheme: light dark;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
@@ -32,8 +35,7 @@ body {
 .tabbar {
   position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   background: var(--surface);
@@ -51,7 +53,6 @@ body {
   font-size: 14px;
   cursor: pointer;
 }
-
 .tab-btn.active {
   color: var(--fg);
   border-top: 2px solid var(--accent);
@@ -59,11 +60,7 @@ body {
 
 /* Контент страниц */
 .page { display: grid; gap: 12px; }
-
-.page h1 {
-  margin: 0 0 8px;
-  font-size: 20px;
-}
+.page h1 { margin: 0 0 8px; font-size: 20px; }
 
 .card {
   border: 1px solid var(--divider);
@@ -71,59 +68,8 @@ body {
   padding: 12px;
   background: var(--surface);
 }
-/* === Форм-контролы: единый тёмный стиль === */
-:root{
-  /* используем уже существующие переменные; при желании можно переопределить одну */
-  --control-bg: var(--surface);
-}
 
-body{
-  /* даём браузеру понять, что поддерживаем обе темы системных контролов */
-  color-scheme: light dark;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Базовый стиль полей */
-input, select, textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--control-bg);
-  color: var(--fg);
-  border: 1px solid var(--divider);
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  caret-color: var(--accent);
-}
-
-/* Высота для textarea */
-textarea { min-height: 96px; resize: vertical; }
-
-/* Placeholder читаемый */
-input::placeholder,
-textarea::placeholder {
-  color: var(--muted);
-  opacity: .9; /* в iOS placeholder бывает слишком бледным — чуть усилим */
-}
-
-/* Фокус: акцентный контур */
-input:focus-visible, select:focus-visible, textarea:focus-visible {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-/* Фолбэк, если color-mix не поддерживается */
-@supports not (color: color-mix(in srgb, white 100%, black 0%)) {
-  input:focus-visible, select:focus-visible, textarea:focus-visible {
-    box-shadow: 0 0 0 2px rgba(77,163,255,.35);
-  }
-}
-
-/* ==== Читаемые поля на тёмной теме (iOS-friendly) ==== */
-:root { --control-bg: var(--surface, #181a1b); }
-
+/* Форм-контролы */
 input, select, textarea {
   width: 100%;
   box-sizing: border-box;
@@ -143,10 +89,33 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: .9; }
 
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(77,163,255,.35);
+  /* если color-mix не поддерживается — браузер просто проигнорирует */
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+@supports not (color: color-mix(in srgb, white 100%, black 0%)) {
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    box-shadow: 0 0 0 2px rgba(77,163,255,.35);
+  }
 }
 
-/* Кнопки внутри карточек — контрастнее */
+/* iOS overrides */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    background: var(--control-bg) !important;
+    color: var(--fg) !important;
+    -webkit-text-fill-color: var(--fg);
+    border-color: var(--divider) !important;
+  }
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--fg);
+    box-shadow: 0 0 0 1000px var(--control-bg) inset !important;
+  }
+  input[type="date"], input[type="time"] { color: var(--fg) !important; }
+}
+
+/* Кнопки в карточках */
 .card button {
   background: var(--surface);
   color: var(--fg);
@@ -156,52 +125,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   cursor: pointer;
 }
 
-/* --- Жёсткие оверрайды для iOS WebView (Telegram) --- */
-@supports (-webkit-touch-callout: none) {
-  input, select, textarea {
-    background: var(--control-bg) !important;
-    color: var(--fg) !important;
-    -webkit-text-fill-color: var(--fg); /* iOS форс цвета текста */
-    border-color: var(--divider) !important;
-  }
-  input::placeholder, textarea::placeholder { color: var(--muted) !important; }
-  /* убираем «жёлтый» autofill и делаем его тёмным */
-  input:-webkit-autofill,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill {
-    -webkit-text-fill-color: var(--fg);
-    box-shadow: 0 0 0 1000px var(--control-bg) inset !important;
-  }
-  /* инпуты даты/времени иногда сереют — фикс */
-  input[type="date"], input[type="time"] { color: var(--fg) !important; }
-}
-/* === Единый фон для всего экрана под цвет страниц === */
-html, body, #app, #content {
-  background: var(--surface) !important;
-}
-
-/* Чтобы карточки не сливались: оставим тонкую рамку */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--divider);
-}
-
+/* UX-мелочи */
 * { -webkit-tap-highlight-color: transparent; }
 html, body, #app {
   -webkit-user-select: none;
-  -ms-user-select: none;
   user-select: none;
-  -webkit-touch-callout: none;  /* запрет долгого тап-меню */
-  touch-action: manipulation;   /* отключает dbl-tap zoom, ускоряет тап */
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
-/* Разрешаем выделение/вставку в формах — иначе неудобно печатать */
+/* Разрешаем выделение/вставку в формах */
 input, textarea, select {
   -webkit-user-select: text;
   user-select: text;
-  -webkit-touch-callout: default; /* оставить меню копировать/вставить */
+  -webkit-touch-callout: default;
 }
-/* Не даём перетаскивать картинки */
-img, a img {
-  -webkit-user-drag: none;
-  user-drag: none;
-}
+img, a img { -webkit-user-drag: none; user-drag: none; }
