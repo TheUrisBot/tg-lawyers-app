@@ -121,26 +121,32 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   }
 }
 
-/* Лейблы делаем более контрастными и компактными */
-.page label {
-  color: var(--muted);
-  font-size: 13px;
-}
+/* ==== Читаемые поля на тёмной теме (iOS-friendly) ==== */
+:root { --control-bg: var(--surface, #181a1b); }
 
-/* Строка поиска — та же стилизация */
-input[type="search"] {
-  -webkit-appearance: none;
-  padding-left: 14px;
-}
-
-/* Дата/время — принудительно наш цвет текста (iOS иногда делает серым) */
-input[type="date"],
-input[type="time"] {
-  color: var(--fg);
+input, select, textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
   background: var(--control-bg);
+  color: var(--fg);
+  border: 1px solid var(--divider);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  caret-color: var(--accent);
+}
+textarea { min-height: 96px; resize: vertical; }
+
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .9; }
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(77,163,255,.35);
 }
 
-/* Кнопки внутри карточек — чуть видимее, если они у тебя прозрачные */
+/* Кнопки внутри карточек — контрастнее */
 .card button {
   background: var(--surface);
   color: var(--fg);
@@ -149,5 +155,23 @@ input[type="time"] {
   padding: 8px 12px;
   cursor: pointer;
 }
-.card button:hover { filter: brightness(1.06); }
-.card button:active { filter: brightness(0.96); }
+
+/* --- Жёсткие оверрайды для iOS WebView (Telegram) --- */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    background: var(--control-bg) !important;
+    color: var(--fg) !important;
+    -webkit-text-fill-color: var(--fg); /* iOS форс цвета текста */
+    border-color: var(--divider) !important;
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted) !important; }
+  /* убираем «жёлтый» autofill и делаем его тёмным */
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--fg);
+    box-shadow: 0 0 0 1000px var(--control-bg) inset !important;
+  }
+  /* инпуты даты/времени иногда сереют — фикс */
+  input[type="date"], input[type="time"] { color: var(--fg) !important; }
+}
