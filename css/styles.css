@@ -1,138 +1,114 @@
-:root {
-  --bg: #0f1012;            /* фон страницы */
-  --fg: #f2f2f2;
-  --muted: #b5b5b5;
-  --accent: #4da3ff;
-  --surface: #1b1d20;       /* ← БЫЛО rgba(...0.03) — делаем плотным */
-  --divider: rgba(255,255,255,.12);
-  --control-bg: #212428;
+:root{
+  /* безопасные дефолты; JS может их подправить под тему Telegram */
+  --bg:       #0f1012;      /* фон страницы */
+  --surface:  #1b1d20;      /* карточки, таббар, поля */
+  --control:  #212428;      /* фон инпутов */
+  --fg:       #f2f2f2;      /* основной текст */
+  --muted:    #a9b0b7;      /* подсказки */
+  --accent:   #4da3ff;      /* акцент */
+  --divider:  rgba(255,255,255,0.12);
 }
 
 html, body { height: 100%; }
 
-body {
+body{
   margin: 0;
-  background: var(--bg);            /* фон страницы */
+  background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  line-height: 1.45;
   color-scheme: light dark;
   -webkit-tap-highlight-color: transparent;
 }
 
-#app {
+#app{
   min-height: 100vh;   /* фолбэк */
-  min-height: 100svh;  /* точная высота на iOS */
+  min-height: 100svh;  /* точная высота в мобильных вебвью */
   display: grid;
   grid-template-rows: 1fr auto;
 }
 
-#content {
+#content{
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
 }
 
-/* Нижняя навигация */
-.tabbar {
+/* --- Нижняя навигация --- */
+.tabbar{
   position: sticky;
   bottom: 0;
   left: 0; right: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: var(--surface);
-  /* backdrop-filter: blur(6px);  ← убрать */
+  gap: 0;
+  background: var(--surface);          /* ПЛОТНЫЙ цвет, без прозрачностей */
   border-top: 1px solid var(--divider);
-  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom, 0px));
 }
 
-.tab-btn {
+.tab-btn{
   appearance: none;
   background: none;
   border: 0;
   color: var(--muted);
-  padding: 12px 4px;
+  padding: 10px 6px;
   font-size: 14px;
   cursor: pointer;
 }
-.tab-btn.active {
+.tab-btn.active{
   color: var(--fg);
   border-top: 2px solid var(--accent);
 }
 
-/* Контент страниц */
-.page { display: grid; gap: 12px; }
-.page h1 { margin: 0 0 8px; font-size: 20px; }
+/* --- Контент и карточки --- */
+.page{ display: grid; gap: 12px; }
+.page h1{ margin: 0 0 8px; font-size: 20px; }
 
-/* Карточки */
-.card {
+.card{
+  background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 12px;
   padding: 12px;
-  background: var(--surface);
 }
 
-/* Форм-контролы */
-input, select, textarea {
+/* --- Формы --- */
+input, select, textarea{
   width: 100%;
   box-sizing: border-box;
   padding: 12px 14px;
   border-radius: 12px;
-  background: var(--control-bg);
+  background: var(--control);
   color: var(--fg);
   border: 1px solid var(--divider);
   outline: none;
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   caret-color: var(--accent);
 }
-textarea { min-height: 96px; resize: vertical; }
-input::placeholder, textarea::placeholder { color: var(--muted); opacity: .9; }
+textarea{ min-height: 96px; resize: vertical; }
+input::placeholder, textarea::placeholder{ color: var(--muted); opacity: .9; }
 
-/* Фокус — сначала безопасный фолбэк */
-input:focus-visible, select:focus-visible, textarea:focus-visible {
+input:focus-visible, select:focus-visible, textarea:focus-visible{
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(77,163,255,.35);
 }
-/* Если движок умеет color-mix — используем его */
-@supports (color: color-mix(in srgb, #000 0%, #fff 100%)) {
-  input:focus-visible, select:focus-visible, textarea:focus-visible {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
-  }
-}
 
-/* iOS overrides */
-@supports (-webkit-touch-callout: none) {
-  input, select, textarea {
-    background: var(--control-bg) !important;
-    color: var(--fg) !important;
+/* iOS/Telegram WebView фолбэки */
+@supports (-webkit-touch-callout: none){
+  input, select, textarea{
     -webkit-text-fill-color: var(--fg);
+    background: var(--control) !important;
     border-color: var(--divider) !important;
   }
   input:-webkit-autofill,
   textarea:-webkit-autofill,
-  select:-webkit-autofill {
+  select:-webkit-autofill{
     -webkit-text-fill-color: var(--fg);
-    box-shadow: 0 0 0 1000px var(--control-bg) inset !important;
+    box-shadow: 0 0 0 1000px var(--control) inset !important;
   }
-  input[type="date"], input[type="time"] { color: var(--fg) !important; }
 }
 
-/* Кнопки в карточках */
-.card button {
-  background: var(--surface);
-  color: var(--fg);
-  border: 1px solid var(--divider);
-  border-radius: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-/* Разрешаем выделение/вставку в формах (остальное — см. JS) */
-input, textarea, select {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
-}
-
-/* Анти-драг для картинок */
-img, a img { -webkit-user-drag: none; user-drag: none; }
+/* UX-мелочи */
+*{ -webkit-tap-highlight-color: transparent; }
+img, a img{ -webkit-user-drag: none; user-drag: none; }

@@ -2,24 +2,21 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover"
-  />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1,
+                 user-scalable=no, viewport-fit=cover" />
   <title>URist — мини-приложение</title>
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Стили (увеличивай v при изменениях, чтобы пробить кэш) -->
-  <link rel="stylesheet" href="./css/styles.css?v=101">
+  <!-- Стили (меняй версию v=… чтобы пробивать кэш) -->
+  <link rel="stylesheet" href="./css/styles.css?v=1">
 </head>
 <body>
   <div id="app">
-    <!-- Контент вкладок сюда подгружается -->
     <main id="content" role="main" aria-live="polite"></main>
 
-    <!-- Нижняя навигация -->
     <nav class="tabbar" role="tablist" aria-label="Нижняя навигация">
       <button class="tab-btn active" data-page="cases" aria-selected="true" role="tab">Дела</button>
       <button class="tab-btn" data-page="hearings" role="tab">Заседания</button>
@@ -28,7 +25,7 @@
     </nav>
   </div>
 
-  <!-- Логика приложения (увеличивай v при изменениях, чтобы пробить кэш) -->
-  <script src="./js/app.js?v=101"></script>
+  <!-- Логика (тоже с версией для кэша) -->
+  <script src="./js/app.js?v=1"></script>
 </body>
 </html>
