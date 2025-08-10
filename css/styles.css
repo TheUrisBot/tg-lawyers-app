@@ -185,35 +185,24 @@ html, body, #app, #content {
   background: var(--surface);
   border: 1px solid var(--divider);
 }
-function enforceNoZoomNoSelect() {
-  let lastTouch = 0;
 
-  // iOS pinch-zoom (не-стандартные события, но работают в iOS WebView)
-  ["gesturestart", "gesturechange", "gestureend"].forEach(type => {
-    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
-  });
-
-  // Двойной тап и Ctrl+wheel зум
-  document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
-  document.addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-
-  // Предотвращаем «дабл-тап» зум (iOS)
-  document.addEventListener("touchend", (e) => {
-    const now = Date.now();
-    if (now - lastTouch <= 300) e.preventDefault();
-    lastTouch = now;
-  }, { passive: false });
-
-  // Запрет выделения/контекстного меню вне полей ввода
-  document.addEventListener("selectstart", (e) => {
-    if (e.target.closest("input, textarea, select")) return;
-    e.preventDefault();
-  });
-  document.addEventListener("contextmenu", (e) => {
-    if (e.target.closest("input, textarea")) return;
-    e.preventDefault();
-  });
+html, body, #app, #content, .card, .tabbar, h1, h2, h3, p, div, span, label {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+input, textarea, select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+/* === Прозрачный фон приложения === */
+html, body, #app, #content {
+  background: transparent !important;
 }
 
-// вызов сразу после init
-enforceNoZoomNoSelect();
+/* === Полный запрет выделения и системного callout === */
+*, *::before, *::after,
+html, body, #app, #content {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important; /* убирает меню по долгому тапу */
+}
