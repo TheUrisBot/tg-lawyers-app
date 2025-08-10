@@ -45,10 +45,47 @@ function applyTheme(themeParams = {}) {
   document.documentElement.style.setProperty("--divider", "rgba(255,255,255,0.08)");
 }
 
-applyTheme(Telegram.WebApp?.themeParams || {});
-Telegram.WebApp?.onEvent?.("themeChanged", () => {
-  applyTheme(Telegram.WebApp.themeParams || {});
-});
+function applyTheme(themeParams = {}) {
+  const get = (k, fallback) => themeParams[k] ? `#${themeParams[k]}` : fallback;
+
+  const bg  = get("bg_color", "#0f0f0f");
+  const fg  = get("text_color", "#f2f2f2");
+  const link = get("link_color", "#4da3ff");
+  const hint = get("hint_color", "#b5b5b5");
+  const secondaryBg = themeParams["secondary_bg_color"] ? `#${themeParams["secondary_bg_color"]}` : null;
+
+  // helpers
+  const hex = (x) => x.replace("#","").padStart(6,"0");
+  const toRGB = (h) => [0,2,4].map(i => parseInt(hex(h).slice(i,i+2),16));
+  const clamp = (n) => Math.max(0, Math.min(255, n));
+  const shade = (h, p) => { // p в процентах: +8 = светлее, -6 = темнее
+    const [r,g,b] = toRGB(h);
+    const k = p/100;
+    const t = k > 0 ? 255 : 0;
+    const rr = clamp(Math.round((t - r)*Math.abs(k) + r));
+    const gg = clamp(Math.round((t - g)*Math.abs(k) + g));
+    const bb = clamp(Math.round((t - b)*Math.abs(k) + b));
+    return `#${[rr,gg,bb].map(v=>v.toString(16).padStart(2,"0")).join("")}`;
+  };
+  const isDark = (h) => {
+    const [r,g,b] = toRGB(h).map(v=>v/255);
+    const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+    return lum < 0.5;
+  };
+
+  // Контрастный фон для инпутов:
+  const controlBg = secondaryBg
+    ? secondaryBg
+    : (isDark(bg) ? shade(bg, +10) : shade(bg, -10));
+
+  document.documentElement.style.setProperty("--bg", bg);
+  document.documentElement.style.setProperty("--fg", fg);
+  document.documentElement.style.setProperty("--muted", hint);
+  document.documentElement.style.setProperty("--accent", link);
+  document.documentElement.style.setProperty("--surface", secondaryBg || "rgba(255,255,255,0.04)");
+  document.documentElement.style.setProperty("--divider", "rgba(255,255,255,0.08)");
+  document.documentElement.style.setProperty("--control-bg", controlBg); // ← ВАЖНО
+}
 
 // --- Небольшой роутер для 4 вкладок ---
 const content = document.getElementById("content");
