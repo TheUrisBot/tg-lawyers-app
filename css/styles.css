@@ -1,34 +1,36 @@
-/* ====== Тема (CSS-переменные) ====== */
+/* ===== Тема (переменные) ===== */
 :root{
-  --bg: #0f1012;                  /* фон темы Telegram (не используем напрямую, т.к. фон приложения прозрачный) */
+  --bg: #0f1012;                  /* общий фон страницы */
   --fg: #f2f2f2;                  /* основной текст */
-  --muted: #a8acb3;               /* подсказки/серый текст */
+  --muted: #a8acb3;               /* подсказки/вторичный текст */
   --accent: #4da3ff;              /* акцент */
-  --surface: #1b1d20;             /* фон карточек/панелей */
-  --divider: rgba(255,255,255,.12);/* границы */
+  --surface: #1b1d20;             /* фон карточек/кнопок */
+  --divider: rgba(255,255,255,.12);/* рамки/линии */
   --control-bg: #212428;          /* фон полей ввода */
 }
 
-*{ box-sizing: border-box; }
+* { box-sizing: border-box; }
 
-/* Поддержка системных тем, отключение вспышки при тапе */
-html,body{
+/* База (возвращаем прежний вид) */
+html, body{
   color-scheme: light dark;
   -webkit-tap-highlight-color: transparent;
   margin: 0;
   padding: 0;
+  background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   line-height: 1.45;
 }
 
-/* === Прозрачный фон приложения (контент «лежит» на фоне Телеграма) === */
-html, body, #app, #content, .tabbar { background: transparent !important; }
+/* Контейнеры без прозрачностей */
+#app, #content, .tabbar { background: var(--bg); }
 
-/* Заголовки/страницы/карточки */
-.page { display:grid; gap:12px; padding: 12px; }
-.page h1 { margin: 8px 0 2px; font-size: 22px; font-weight: 700; }
+/* Страница и заголовок */
+.page { display:grid; gap:12px; padding:12px; }
+.page h1 { margin:8px 0 2px; font-size:22px; font-weight:700; }
 
+/* Карточки */
 .card{
   background: var(--surface);
   border: 1px solid var(--divider);
@@ -44,9 +46,9 @@ html, body, #app, #content, .tabbar { background: transparent !important; }
   grid-auto-flow: column;
   gap: 6px;
   padding: 10px;
-  border-top: 1px solid var(--divider) !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
+  border-top: 1px solid var(--divider);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .tab-btn{
   cursor: pointer;
@@ -62,7 +64,7 @@ html, body, #app, #content, .tabbar { background: transparent !important; }
   outline: none;
 }
 
-/* Форм-контролы: читаемые в тёмной теме и на iOS */
+/* Формы: читаемо и аккуратно */
 input, select, textarea{
   width: 100%;
   padding: 12px 14px;
@@ -77,13 +79,12 @@ input, select, textarea{
 }
 textarea{ min-height: 96px; resize: vertical; }
 input::placeholder, textarea::placeholder{ color: var(--muted); opacity: .9; }
-
 input:focus-visible, select:focus-visible, textarea:focus-visible{
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(77,163,255,.35);
 }
 
-/* iOS: принудительный цвет текста и autofill */
+/* iOS: цвет текста и autofill */
 @supports (-webkit-touch-callout: none) {
   input, select, textarea{
     -webkit-text-fill-color: var(--fg);
@@ -110,15 +111,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible{
 .card button:hover{ filter: brightness(1.06); }
 .card button:active{ filter: brightness(0.96); }
 
-/* Поисковая строка */
+/* Поиск */
 input[type="search"]{ -webkit-appearance: none; padding-left: 14px; }
 
-/* === Полный запрет выделения/контекстного меню везде (как просили) === */
-*, *::before, *::after,
-html, body, #app, #content, .card, .tabbar, h1, h2, h3, p, div, span, label{
-  -webkit-user-select: none !important;
-  user-select: none !important;
-  -webkit-touch-callout: none !important;
+/* Запрет выделения везде, КРОМЕ полей ввода */
+html, body, #app {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, select{
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Запрет перетаскивания изображений */
