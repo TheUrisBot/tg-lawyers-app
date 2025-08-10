@@ -1,18 +1,18 @@
 :root {
-  --bg: #0f0f0f;
+  --bg: #0f1012;            /* фон страницы */
   --fg: #f2f2f2;
   --muted: #b5b5b5;
   --accent: #4da3ff;
-  --surface: rgba(255,255,255,0.03);
-  --divider: rgba(255,255,255,0.08);
-  --control-bg: var(--surface);
+  --surface: #1b1d20;       /* ← БЫЛО rgba(...0.03) — делаем плотным */
+  --divider: rgba(255,255,255,.12);
+  --control-bg: #212428;
 }
 
 html, body { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);           /* ← фон страницы как раньше */
+  background: var(--bg);            /* фон страницы */
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   color-scheme: light dark;
@@ -20,7 +20,8 @@ body {
 }
 
 #app {
-  min-height: 100svh;
+  min-height: 100vh;   /* фолбэк */
+  min-height: 100svh;  /* точная высота на iOS */
   display: grid;
   grid-template-rows: 1fr auto;
 }
@@ -39,7 +40,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   background: var(--surface);
-  backdrop-filter: blur(6px);
+  /* backdrop-filter: blur(6px);  ← убрать */
   border-top: 1px solid var(--divider);
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
@@ -62,6 +63,7 @@ body {
 .page { display: grid; gap: 12px; }
 .page h1 { margin: 0 0 8px; font-size: 20px; }
 
+/* Карточки */
 .card {
   border: 1px solid var(--divider);
   border-radius: 12px;
@@ -84,17 +86,17 @@ input, select, textarea {
   caret-color: var(--accent);
 }
 textarea { min-height: 96px; resize: vertical; }
-
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: .9; }
 
+/* Фокус — сначала безопасный фолбэк */
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--accent);
-  /* если color-mix не поддерживается — браузер просто проигнорирует */
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 2px rgba(77,163,255,.35);
 }
-@supports not (color: color-mix(in srgb, white 100%, black 0%)) {
+/* Если движок умеет color-mix — используем его */
+@supports (color: color-mix(in srgb, #000 0%, #fff 100%)) {
   input:focus-visible, select:focus-visible, textarea:focus-visible {
-    box-shadow: 0 0 0 2px rgba(77,163,255,.35);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
   }
 }
 
@@ -125,10 +127,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   cursor: pointer;
 }
 
-/* Разрешаем выделение/вставку в формах */
+/* Разрешаем выделение/вставку в формах (остальное — см. JS) */
 input, textarea, select {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
 }
+
+/* Анти-драг для картинок */
 img, a img { -webkit-user-drag: none; user-drag: none; }
