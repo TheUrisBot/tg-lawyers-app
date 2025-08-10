@@ -1,4 +1,6 @@
-// ===== Telegram init + тема (без setHeaderColor, как раньше) =====
+// js/app.js
+
+// ===== Telegram init + тема =====
 function initTelegram() {
   const tg = window.Telegram?.WebApp ?? {
     themeParams: {},
@@ -10,41 +12,44 @@ function initTelegram() {
   applyTheme(tg.themeParams || {});
   try { tg.ready(); } catch {}
 
-  tg.onEvent?.('themeChanged', () => {
+  // слушаем изменения темы из Телеграма
+  tg.onEvent?.("themeChanged", () => {
     applyTheme(window.Telegram.WebApp.themeParams || {});
   });
 }
 
-// Выставляем CSS-переменные из themeParams + контраст для контролов
+// Выставляем CSS-переменные из themeParams + вычисляем контраст для контролов
 function applyTheme(themeParams = {}) {
   const pick = (k, fb) => (themeParams[k] ? `#${themeParams[k]}` : fb);
 
-  const bg  = pick("bg_color", "#0f1012");
-  const fg  = pick("text_color", "#f2f2f2");
-  const link= pick("link_color", "#4da3ff");
-  const hint= pick("hint_color", "#a8acb3");
+  const bg = pick("bg_color", "#0f0f10");
+  const fg = pick("text_color", "#f2f2f2");
+  const link = pick("link_color", "#4da3ff");
+  const hint = pick("hint_color", "#a8acb3");
   const secondary = themeParams["secondary_bg_color"] ? `#${themeParams["secondary_bg_color"]}` : null;
 
-  const hex = (x) => x.replace("#","").padStart(6,"0");
-  const toRGB = (h) => [0,2,4].map(i => parseInt(hex(h).slice(i,i+2),16));
+  // helpers
+  const hex = (x) => x.replace("#", "").padStart(6, "0");
+  const toRGB = (h) => [0, 2, 4].map(i => parseInt(hex(h).slice(i, i + 2), 16));
   const clamp = (n) => Math.max(0, Math.min(255, n));
   const shade = (h, p) => { // p: -100..+100
-    const [r,g,b] = toRGB(h);
-    const k = p/100, t = k>0 ? 255 : 0;
-    const rr = clamp(Math.round((t-r)*Math.abs(k)+r));
-    const gg = clamp(Math.round((t-g)*Math.abs(k)+g));
-    const bb = clamp(Math.round((t-b)*Math.abs(k)+b));
-    return `#${[rr,gg,bb].map(v=>v.toString(16).padStart(2,"0")).join("")}`;
+    const [r, g, b] = toRGB(h);
+    const k = p / 100;
+    const t = k > 0 ? 255 : 0;
+    const rr = clamp(Math.round((t - r) * Math.abs(k) + r));
+    const gg = clamp(Math.round((t - g) * Math.abs(k) + g));
+    const bb = clamp(Math.round((t - b) * Math.abs(k) + b));
+    return `#${[rr, gg, bb].map(v => v.toString(16).padStart(2, "0")).join("")}`;
   };
   const isDark = (h) => {
-    const [r,g,b] = toRGB(h).map(v=>v/255);
-    const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+    const [r, g, b] = toRGB(h).map(v => v / 255);
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     return lum < 0.5;
   };
 
-  const surface   = secondary || (isDark(bg) ? shade(bg,+6) : shade(bg,-6));
-  const divider   = isDark(bg) ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)";
-  const controlBg = secondary || (isDark(bg) ? shade(bg,+10) : shade(bg,-10));
+  const surface = secondary || (isDark(bg) ? shade(bg, +6) : shade(bg, -6));
+  const divider = isDark(bg) ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)";
+  const controlBg = secondary || (isDark(bg) ? shade(bg, +10) : shade(bg, -10));
 
   const root = document.documentElement.style;
   root.setProperty("--bg", bg);
@@ -56,7 +61,7 @@ function applyTheme(themeParams = {}) {
   root.setProperty("--control-bg", controlBg);
 }
 
-// ===== Навигация / загрузка страниц =====
+// ===== Навигация по вкладкам и загрузка страниц =====
 const PAGES = {
   cases: "pages/cases.html",
   hearings: "pages/hearings.html",
@@ -78,11 +83,15 @@ async function loadPage(key) {
   if (!content) return;
 
   try {
+    // тихий прелоадер
     content.innerHTML = `<div style="padding:16px; color:var(--muted);">Загрузка…</div>`;
     const res = await fetch(url, { cache: "no-store" });
     const html = await res.text();
     content.innerHTML = html;
+
+    // ВАЖНО: выполнить скрипты внутри загруженной страницы
     runPageScripts(content);
+
     setActiveTab(key);
   } catch (e) {
     content.innerHTML = `<div style="padding:16px; color:tomato;">Ошибка загрузки страницы.</div>`;
@@ -90,6 +99,7 @@ async function loadPage(key) {
   }
 }
 
+// Выполняем <script> теги, вставленные через innerHTML
 function runPageScripts(root) {
   const scripts = Array.from(root.querySelectorAll("script"));
   scripts.forEach(old => {
@@ -101,6 +111,7 @@ function runPageScripts(root) {
   });
 }
 
+// Маршрутизация по #hash
 function currentKeyFromHash() {
   const h = (location.hash || "").replace(/^#/, "");
   return PAGES[h] ? h : "cases";
@@ -118,45 +129,68 @@ function initTabs() {
       }
     });
   });
-  window.addEventListener("hashchange", () => loadPage(currentKeyFromHash()));
+
+  window.addEventListener("hashchange", () => {
+    loadPage(currentKeyFromHash());
+  });
 }
 
-// ===== Запрет зума и выделения (разрешаем в полях ввода) =====
+// ===== Полный запрет зума и выделения (жёсткий, кросс-платформенный) =====
 function enforceNoZoomNoSelect() {
   let lastTouch = 0;
 
-  ["gesturestart","gesturechange","gestureend"].forEach(type => {
-    document.addEventListener(type, (e) => e.preventDefault(), { passive:false });
+  // Блок pinch-zoom (iOS WebView)
+  ["gesturestart", "gesturechange", "gestureend"].forEach(type => {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
   });
+
+  // Мультитач и pinch через touchmove (особенно для Telegram iOS)
   document.addEventListener("touchstart", (e) => {
     if (e.touches && e.touches.length > 1) e.preventDefault();
-  }, { passive:false });
+  }, { passive: false });
+
   document.addEventListener("touchmove", (e) => {
     if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) {
       e.preventDefault();
     }
-  }, { passive:false });
-  document.addEventListener("dblclick", (e) => e.preventDefault(), { passive:false });
-  document.addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive:false });
+  }, { passive: false });
+
+  // Двойной тап и Ctrl+wheel зум
+  document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("wheel", (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+
+  // Быстрый повторный тап (дабл-тап)
   document.addEventListener("touchend", (e) => {
     const now = Date.now();
     if (now - lastTouch <= 300) e.preventDefault();
     lastTouch = now;
-  }, { passive:false });
+  }, { passive: false });
 
-  // ВНЕ input/textarea/select — запрет выделения/контекстного меню
-  document.addEventListener("selectstart", (e) => {
-    if (e.target.closest("input, textarea, select")) return;
-    e.preventDefault();
-  }, { passive:false });
-  document.addEventListener("contextmenu", (e) => {
-    if (e.target.closest("input, textarea")) return;
-    e.preventDefault();
+  // Запрет выделения и контекстного меню везде
+  document.addEventListener("selectstart", (e) => { e.preventDefault(); }, { passive: false });
+  document.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+
+  // Если выделение всё же появилось — сразу снимаем
+  document.addEventListener("selectionchange", () => {
+    const sel = window.getSelection && window.getSelection();
+    if (sel && sel.rangeCount) sel.removeAllRanges?.();
+
+    const el = document.activeElement;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+      try { el.selectionStart = el.selectionEnd = (el.value?.length ?? 0); } catch {}
+    }
+  });
+
+  // Горячие клавиши зума (Desktop)
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "-" || e.key === "=")) {
+      e.preventDefault();
+    }
   });
 }
 
 // ===== Boot =====
-(function boot(){
+(function boot() {
   initTelegram();
   initTabs();
   enforceNoZoomNoSelect();
