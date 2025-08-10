@@ -175,3 +175,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   /* инпуты даты/времени иногда сереют — фикс */
   input[type="date"], input[type="time"] { color: var(--fg) !important; }
 }
+/* === Единый фон для всего экрана под цвет страниц === */
+html, body, #app, #content {
+  background: var(--surface) !important;
+}
+
+/* Чтобы карточки не сливались: оставим тонкую рамку */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+}

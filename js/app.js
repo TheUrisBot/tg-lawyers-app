@@ -48,7 +48,7 @@ function applyTheme(themeParams = {}) {
 function applyTheme(themeParams = {}) {
   const get = (k, fallback) => themeParams[k] ? `#${themeParams[k]}` : fallback;
 
-  const bg  = get("bg_color", "#ff0000ff");
+  const bg  = get("bg_color", "#0f0f0f");
   const fg  = get("text_color", "#f2f2f2");
   const link = get("link_color", "#4da3ff");
   const hint = get("hint_color", "#b5b5b5");
@@ -86,6 +86,7 @@ function applyTheme(themeParams = {}) {
   document.documentElement.style.setProperty("--divider", "rgba(255,255,255,0.08)");
   document.documentElement.style.setProperty("--control-bg", controlBg); // ← ВАЖНО
 }
+
 
 // --- Небольшой роутер для 4 вкладок ---
 const content = document.getElementById("content");
