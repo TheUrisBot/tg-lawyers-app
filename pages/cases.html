@@ -33,7 +33,10 @@
         </label>
         <label>
           <span>ИНН</span>
-          <input type="text" id="cases-inn" inputmode="numeric" pattern="\\d{10}|\\d{12}" placeholder="10 или 12 цифр" />
+          <!-- ВАЖНО: правильный pattern без двойных слэшей -->
+          <input type="text" id="cases-inn" inputmode="numeric"
+                 pattern="[0-9]{10}|[0-9]{12}" title="ИНН: 10 или 12 цифр"
+                 placeholder="10 или 12 цифр" />
         </label>
         <label>
           <span>Суд</span>
@@ -53,7 +56,7 @@
       </div>
       <div class="form-actions">
         <button type="button" class="ghost" onclick="CASES && CASES.toggleForm(false)">Свернуть</button>
-        <button type="submit" class="primary">Сохранить</button>
+        <button type="submit" class="primary" id="cases-submit-btn">Сохранить</button>
       </div>
     </form>
   </div>
@@ -150,6 +153,7 @@
       LS_KEY: 'tl_cases_v1',
       data: [],
       state: { query: '', filter: 'all' },
+      editingId: null,
 
       init() {
         try {
@@ -189,22 +193,48 @@
 
         if (shouldOpen === isOpen) return;
 
-        // подготовка
         wrap.style.overflow = 'hidden';
         if (shouldOpen) {
           wrap.classList.add('open');
-          // сначала вычисляем высоту
           wrap.style.maxHeight = wrap.scrollHeight + 'px';
           setExpanded(btn, wrap, true);
+          document.getElementById('cases-number').focus();
         } else {
-          // зафиксировать текущую высоту и потом анимировать к 0
           wrap.style.maxHeight = wrap.scrollHeight + 'px';
           requestAnimationFrame(() => { wrap.style.maxHeight = '0px'; });
           setExpanded(btn, wrap, false);
           wrap.addEventListener('transitionend', () => {
             wrap.classList.remove('open');
+            // при сворачивании — сбрасываем режим редактирования
+            CASES.cancelEdit();
           }, { once: true });
         }
+      },
+
+      // Редактирование
+      edit(id) {
+        const item = this.data.find(x => x.id === id);
+        if (!item) return;
+        this.editingId = id;
+
+        document.getElementById('cases-number').value = item.number || '';
+        document.getElementById('cases-debtor').value = item.debtor || '';
+        document.getElementById('cases-inn').value    = item.inn || '';
+        document.getElementById('cases-court').value  = item.court || '';
+        document.getElementById('cases-note').value   = item.note || '';
+        document.getElementById('cases-status').value = item.status || 'active';
+        document.getElementById('cases-submit-btn').textContent = 'Обновить';
+
+        // открыть форму
+        const wrap = document.getElementById('cases-form-wrap');
+        if (!wrap.classList.contains('open')) this.toggleForm(true);
+        else document.getElementById('cases-number').focus();
+      },
+
+      cancelEdit() {
+        this.editingId = null;
+        document.getElementById('cases-submit-btn').textContent = 'Сохранить';
+        this.clearForm();
       },
 
       submit(ev) {
@@ -217,16 +247,35 @@
         const status = document.getElementById('cases-status').value;
 
         if (!number || !debtor) { alert('Заполни обязательные поля: Номер дела и Должник.'); return; }
-        if (inn && !( /^\\d{10}$/.test(inn) || /^\\d{12}$/.test(inn) )) { alert('ИНН должен содержать 10 или 12 цифр.'); return; }
+        // ВАЖНО: правильные регэкспы без двойных слэшей
+        if (inn && !(/^\d{10}$/.test(inn) || /^\d{12}$/.test(inn))) {
+          alert('ИНН должен содержать 10 или 12 цифр.');
+          return;
+        }
 
-        this.data.push({
-          id: String(Date.now()),
-          number, debtor, inn, court, note,
-          status: status === 'archived' ? 'archived' : 'active',
-          createdAt: Date.now()
-        });
+        if (this.editingId) {
+          // обновление существующей записи
+          const idx = this.data.findIndex(x => x.id === this.editingId);
+          if (idx !== -1) {
+            const prev = this.data[idx];
+            this.data[idx] = {
+              ...prev,
+              number, debtor, inn, court, note,
+              status: status === 'archived' ? 'archived' : 'active'
+            };
+          }
+        } else {
+          // добавление новой
+          this.data.push({
+            id: String(Date.now()),
+            number, debtor, inn, court, note,
+            status: status === 'archived' ? 'archived' : 'active',
+            createdAt: Date.now()
+          });
+        }
+
         this.save();
-        this.clearForm();
+        this.cancelEdit();
         this.toggleForm(false);
         this.render();
       },
@@ -266,7 +315,7 @@
         }
         if (this.state.filter !== 'all') items = items.filter(i => i.status === this.state.filter);
 
-        // без поля "следующее заседание" сортируем по дате создания (новые выше)
+        // сортировка по дате создания (новые выше)
         items.sort((a,b) => b.createdAt - a.createdAt);
 
         if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
@@ -290,6 +339,7 @@
               <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
                 ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
               </button>
+              <button class="ghost" onclick="CASES && CASES.edit('${i.id}')">Редактировать</button>
               <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
             </div>
           </article>
