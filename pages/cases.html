@@ -130,184 +130,157 @@
     }
   </style>
 
-  <!-- Инициализация. ВАЖНО: скрипты во вставках через innerHTML не исполняются,
-       поэтому используем onload у изображения, чтобы выполнить код сразу после вставки -->
+  <!-- Код логики хранится тут (инертный) -->
+  <script type="text/plain" id="cases-inline-js">
+  (function () {
+    window.CASES = {
+      LS_KEY: 'tl_cases_v1',
+      data: [],
+      state: { query: '', filter: 'all' },
+
+      init() {
+        try {
+          const raw = localStorage.getItem(this.LS_KEY);
+          this.data = raw ? JSON.parse(raw) : [];
+        } catch(e) { this.data = []; }
+
+        if (!this.data.length) {
+          this.data = [
+            { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', next: '2025-09-05', status: 'active', createdAt: Date.now()-20000 },
+            { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.', inn: '781234567890', court: 'АС СПб', next: '2025-08-28', status: 'active', createdAt: Date.now()-10000 },
+            { id: String(Date.now()),   number: 'А40-22222/2023', debtor: 'ООО «Ромашка»', inn: '7722334455', court: 'АС г. Москвы', next: '',          status: 'archived', createdAt: Date.now() }
+          ];
+          this.save();
+        }
+        this.render();
+      },
+
+      save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
+      setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },
+
+      setFilter(f) {
+        this.state.filter = f;
+        document.querySelectorAll('#cases-page .chip').forEach(ch => {
+          ch.classList.toggle('active', ch.dataset.filter === f);
+          ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
+        });
+        this.render();
+      },
+
+      toggleForm(force) {
+        const form = document.getElementById('cases-form');
+        const show = (typeof force === 'boolean') ? force : form.hidden;
+        form.hidden = !show;
+        if (show) document.getElementById('cases-number').focus();
+      },
+
+      submit(ev) {
+        ev && ev.preventDefault();
+        const number = document.getElementById('cases-number').value.trim();
+        const debtor = document.getElementById('cases-debtor').value.trim();
+        const inn    = document.getElementById('cases-inn').value.trim();
+        const court  = document.getElementById('cases-court').value.trim();
+        const next   = document.getElementById('cases-next').value;
+        const status = document.getElementById('cases-status').value;
+
+        if (!number || !debtor) { alert('Заполни обязательные поля: Номер дела и Должник.'); return; }
+        if (inn && !( /^\d{10}$/.test(inn) || /^\d{12}$/.test(inn) )) { alert('ИНН должен содержать 10 или 12 цифр.'); return; }
+
+        this.data.push({
+          id: String(Date.now()),
+          number, debtor, inn, court, next,
+          status: status === 'archived' ? 'archived' : 'active',
+          createdAt: Date.now()
+        });
+        this.save();
+        this.clearForm();
+        this.toggleForm(false);
+        this.render();
+      },
+
+      clearForm() {
+        ['cases-number','cases-debtor','cases-inn','cases-court','cases-next'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('cases-status').value = 'active';
+      },
+
+      toggleArchive(id) {
+        const item = this.data.find(x => x.id === id); if (!item) return;
+        item.status = item.status === 'active' ? 'archived' : 'active';
+        this.save(); this.render();
+      },
+
+      remove(id) {
+        if (!confirm('Удалить дело? Действие необратимо.')) return;
+        this.data = this.data.filter(x => x.id !== id);
+        this.save(); this.render();
+      },
+
+      formatDate(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString('ru-RU'); } catch(e) { return '—'; }
+      },
+
+      render() {
+        const list = document.getElementById('cases-list');
+        const empty = document.getElementById('cases-empty');
+
+        let items = this.data.slice();
+        const q = this.state.query;
+        if (q) {
+          items = items.filter(i =>
+            i.number.toLowerCase().includes(q) ||
+            (i.debtor || '').toLowerCase().includes(q) ||
+            (i.inn || '').includes(q)
+          );
+        }
+        if (this.state.filter !== 'all') items = items.filter(i => i.status === this.state.filter);
+
+        items.sort((a,b) => {
+          const ad = a.next ? new Date(a.next).getTime() : Infinity;
+          const bd = b.next ? new Date(b.next).getTime() : Infinity;
+          if (ad !== bd) return ad - bd;
+          return b.createdAt - a.createdAt;
+        });
+
+        if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
+        empty.hidden = true;
+
+        list.innerHTML = items.map(i => `
+          <article class="case-card" role="listitem" data-id="${i.id}">
+            <div class="case-head">
+              <div class="case-number">${i.number}</div>
+              <div class="badge ${i.status === 'active' ? 'active' : ''}">
+                ${i.status === 'active' ? 'Активное' : 'Архив'}
+              </div>
+            </div>
+            <div class="case-row">
+              <span><strong>Должник:</strong> ${i.debtor || '—'}</span>
+              <span><strong>ИНН:</strong> ${i.inn || '—'}</span>
+              <span><strong>Суд:</strong> ${i.court || '—'}</span>
+            </div>
+            <div class="case-row">
+              <span><strong>Следующее заседание:</strong> ${this.formatDate(i.next)}</span>
+            </div>
+            <div class="case-actions">
+              <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
+                ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
+              </button>
+              <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
+            </div>
+          </article>
+        `).join('');
+      }
+    };
+
+    // Автоинициализация
+    window.CASES.init();
+  })();
+  </script>
+
+  <!-- Маленький «триггер», который безопасно исполняет код выше -->
   <img alt="" aria-hidden="true" style="display:none"
        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-       onload="
-         (function () {
-           // Глобальный объект только для этой вкладки
-           window.CASES = {
-             LS_KEY: 'tl_cases_v1',
-             data: [],
-             state: { query: '', filter: 'all' },
-
-             init() {
-               try {
-                 const raw = localStorage.getItem(this.LS_KEY);
-                 this.data = raw ? JSON.parse(raw) : [];
-               } catch(e) { this.data = []; }
-
-               // Сид-данные для демонстрации
-               if (!this.data.length) {
-                 this.data = [
-                   { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', next: '2025-09-05', status: 'active', createdAt: Date.now()-20000 },
-                   { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.', inn: '781234567890', court: 'АС СПб', next: '2025-08-28', status: 'active', createdAt: Date.now()-10000 },
-                   { id: String(Date.now()), number: 'А40-22222/2023', debtor: 'ООО «Ромашка»', inn: '7722334455', court: 'АС г. Москвы', next: '', status: 'archived', createdAt: Date.now() }
-                 ];
-                 this.save();
-               }
-               this.render();
-             },
-
-             save() {
-               localStorage.setItem(this.LS_KEY, JSON.stringify(this.data));
-             },
-
-             setQuery(v) {
-               this.state.query = (v || '').toLowerCase();
-               this.render();
-             },
-
-             setFilter(f) {
-               this.state.filter = f;
-               // визуально активная «чипа»
-               document.querySelectorAll('#cases-page .chip').forEach(ch => {
-                 ch.classList.toggle('active', ch.dataset.filter === f);
-                 ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
-               });
-               this.render();
-             },
-
-             toggleForm(force) {
-               const form = document.getElementById('cases-form');
-               const show = (typeof force === 'boolean') ? force : form.hidden;
-               form.hidden = !show;
-               if (show) document.getElementById('cases-number').focus();
-             },
-
-             submit(ev) {
-               ev && ev.preventDefault();
-               const number = document.getElementById('cases-number').value.trim();
-               const debtor = document.getElementById('cases-debtor').value.trim();
-               const inn    = document.getElementById('cases-inn').value.trim();
-               const court  = document.getElementById('cases-court').value.trim();
-               const next   = document.getElementById('cases-next').value;
-               const status = document.getElementById('cases-status').value;
-
-               if (!number || !debtor) {
-                 alert('Заполни обязательные поля: Номер дела и Должник.');
-                 return;
-               }
-               if (inn && !( /^\\d{10}$/.test(inn) || /^\\d{12}$/.test(inn) )) {
-                 alert('ИНН должен содержать 10 или 12 цифр.');
-                 return;
-               }
-
-               const item = {
-                 id: String(Date.now()),
-                 number, debtor, inn, court, next,
-                 status: status === 'archived' ? 'archived' : 'active',
-                 createdAt: Date.now()
-               };
-               this.data.push(item);
-               this.save();
-               this.clearForm();
-               this.toggleForm(false);
-               this.render();
-             },
-
-             clearForm() {
-               ['cases-number','cases-debtor','cases-inn','cases-court','cases-next'].forEach(id => {
-                 const el = document.getElementById(id);
-                 if (el) el.value = '';
-               });
-               document.getElementById('cases-status').value = 'active';
-             },
-
-             toggleArchive(id) {
-               const item = this.data.find(x => x.id === id);
-               if (!item) return;
-               item.status = item.status === 'active' ? 'archived' : 'active';
-               this.save();
-               this.render();
-             },
-
-             remove(id) {
-               if (!confirm('Удалить дело? Действие необратимо.')) return;
-               this.data = this.data.filter(x => x.id !== id);
-               this.save();
-               this.render();
-             },
-
-             formatDate(iso) {
-               if (!iso) return '—';
-               try { return new Date(iso).toLocaleDateString('ru-RU'); } catch(e) { return '—'; }
-             },
-
-             render() {
-               const list = document.getElementById('cases-list');
-               const empty = document.getElementById('cases-empty');
-
-               // фильтрация
-               let items = this.data.slice();
-               const q = this.state.query;
-               if (q) {
-                 items = items.filter(i =>
-                   i.number.toLowerCase().includes(q) ||
-                   (i.debtor || '').toLowerCase().includes(q) ||
-                   (i.inn || '').includes(q)
-                 );
-               }
-               if (this.state.filter !== 'all') {
-                 items = items.filter(i => i.status === this.state.filter);
-               }
-
-               // сортировка: ближайшее заседание вверх; пустые даты — вниз; затем по созданию (новые вверх)
-               items.sort((a,b) => {
-                 const ad = a.next ? new Date(a.next).getTime() : Infinity;
-                 const bd = b.next ? new Date(b.next).getTime() : Infinity;
-                 if (ad !== bd) return ad - bd;
-                 return b.createdAt - a.createdAt;
-               });
-
-               // рендер
-               if (!items.length) {
-                 list.innerHTML = '';
-                 empty.hidden = false;
-                 return;
-               }
-               empty.hidden = true;
-
-               list.innerHTML = items.map(i => `
-                 <article class="case-card" role="listitem" data-id="${i.id}">
-                   <div class="case-head">
-                     <div class="case-number">${i.number}</div>
-                     <div class="badge ${i.status === 'active' ? 'active' : ''}">
-                       ${i.status === 'active' ? 'Активное' : 'Архив'}
-                     </div>
-                   </div>
-                   <div class="case-row">
-                     <span><strong>Должник:</strong> ${i.debtor || '—'}</span>
-                     <span><strong>ИНН:</strong> ${i.inn || '—'}</span>
-                     <span><strong>Суд:</strong> ${i.court || '—'}</span>
-                   </div>
-                   <div class="case-row">
-                     <span><strong>Следующее заседание:</strong> ${this.formatDate(i.next)}</span>
-                   </div>
-                   <div class="case-actions">
-                     <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
-                       ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
-                     </button>
-                     <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
-                   </div>
-                 </article>
-               `).join('');
-             }
-           };
-
-           // Автоинициализация при вставке вкладки
-           window.CASES.init();
-         })();
-       ">
+       onload='(function(){var s=document.getElementById("cases-inline-js"); if(s){ new Function(s.textContent)(); }})();' />
 </section>
