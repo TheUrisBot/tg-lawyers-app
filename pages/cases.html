@@ -9,7 +9,7 @@
       <button class="ghost" aria-label="Очистить поиск"
               onclick="CASES && CASES.setQuery(''); const i=document.getElementById('cases-search-input'); i.value=''; i.focus();">✕</button>
     </div>
-    <button class="primary" id="cases-add-btn" onclick="CASES && CASES.toggleForm()">Добавить</button>
+    <button class="primary" id="cases-add-btn" aria-expanded="false" onclick="CASES && CASES.toggleForm()">Добавить</button>
   </div>
 
   <!-- Фильтры -->
@@ -19,42 +19,44 @@
     <button role="tab" class="chip" data-filter="archived" onclick="CASES && CASES.setFilter('archived')">Архив</button>
   </div>
 
-  <!-- Форма добавления -->
-  <form id="cases-form" class="cases-form" onsubmit="CASES && CASES.submit(event)" hidden>
-    <div class="grid">
-      <label>
-        <span>Номер дела *</span>
-        <input type="text" id="cases-number" required placeholder="А40-12345/2025" />
-      </label>
-      <label>
-        <span>Должник *</span>
-        <input type="text" id="cases-debtor" required placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
-      </label>
-      <label>
-        <span>ИНН</span>
-        <input type="text" id="cases-inn" inputmode="numeric" pattern="\\d{10}|\\d{12}" placeholder="10 или 12 цифр" />
-      </label>
-      <label>
-        <span>Суд</span>
-        <input type="text" id="cases-court" placeholder="АС г. Москвы" />
-      </label>
-      <label>
-        <span>Следующее заседание</span>
-        <input type="date" id="cases-next" />
-      </label>
-      <label>
-        <span>Статус</span>
-        <select id="cases-status">
-          <option value="active" selected>Активное</option>
-          <option value="archived">Архив</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-actions">
-      <button type="button" class="ghost" onclick="CASES && CASES.toggleForm(false)">Отмена</button>
-      <button type="submit" class="primary">Сохранить</button>
-    </div>
-  </form>
+  <!-- Сворачиваемый блок формы -->
+  <div id="cases-form-wrap" class="collapse" aria-hidden="true">
+    <form id="cases-form" class="cases-form" onsubmit="CASES && CASES.submit(event)">
+      <div class="grid">
+        <label>
+          <span>Номер дела *</span>
+          <input type="text" id="cases-number" required placeholder="А40-12345/2025" />
+        </label>
+        <label>
+          <span>Должник *</span>
+          <input type="text" id="cases-debtor" required placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
+        </label>
+        <label>
+          <span>ИНН</span>
+          <input type="text" id="cases-inn" inputmode="numeric" pattern="\\d{10}|\\d{12}" placeholder="10 или 12 цифр" />
+        </label>
+        <label>
+          <span>Суд</span>
+          <input type="text" id="cases-court" placeholder="АС г. Москвы" />
+        </label>
+        <label style="grid-column: 1 / -1;">
+          <span>Примечание</span>
+          <textarea id="cases-note" rows="2" placeholder="Произвольные комментарии по делу"></textarea>
+        </label>
+        <label>
+          <span>Статус</span>
+          <select id="cases-status">
+            <option value="active" selected>Активное</option>
+            <option value="archived">Архив</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="ghost" onclick="CASES && CASES.toggleForm(false)">Свернуть</button>
+        <button type="submit" class="primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
 
   <!-- Список дел -->
   <div id="cases-list" class="cases-list" role="list"></div>
@@ -86,6 +88,12 @@
       padding: 6px 10px; border-radius: 999px; cursor: pointer;
     }
     .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
+
+    /* Сворачиваемая область */
+    .collapse { max-height: 0; overflow: hidden; opacity: 0;
+      transition: max-height 240ms ease, opacity 240ms ease; }
+    .collapse.open { opacity: 1; }
+
     .cases-form {
       border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
       border-radius: 16px; padding: 12px; display: grid; gap: 12px;
@@ -94,12 +102,12 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
     }
     .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
-    .cases-form input, .cases-form select {
+    .cases-form input, .cases-form select, .cases-form textarea {
       padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
       background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);
-      outline: none;
+      outline: none; resize: vertical;
     }
-    .cases-form input:focus, .cases-form select:focus { border-color: var(--app-accent); }
+    .cases-form input:focus, .cases-form select:focus, .cases-form textarea:focus { border-color: var(--app-accent); }
     .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
     .primary, .ghost {
       appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
@@ -133,6 +141,11 @@
   <!-- Код логики хранится тут (инертный) -->
   <script type="text/plain" id="cases-inline-js">
   (function () {
+    function setExpanded(btn, wrap, open) {
+      btn?.setAttribute('aria-expanded', String(open));
+      wrap?.setAttribute('aria-hidden', String(!open));
+    }
+
     window.CASES = {
       LS_KEY: 'tl_cases_v1',
       data: [],
@@ -146,9 +159,9 @@
 
         if (!this.data.length) {
           this.data = [
-            { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', next: '2025-09-05', status: 'active', createdAt: Date.now()-20000 },
-            { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.', inn: '781234567890', court: 'АС СПб', next: '2025-08-28', status: 'active', createdAt: Date.now()-10000 },
-            { id: String(Date.now()),   number: 'А40-22222/2023', debtor: 'ООО «Ромашка»', inn: '7722334455', court: 'АС г. Москвы', next: '',          status: 'archived', createdAt: Date.now() }
+            { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', note: 'Первичное обращение', status: 'active', createdAt: Date.now()-20000 },
+            { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.',          inn: '781234567890', court: 'АС СПб',        note: '',                    status: 'active', createdAt: Date.now()-10000 },
+            { id: String(Date.now()),   number: 'А40-22222/2023', debtor: 'ООО «Ромашка»',      inn: '7722334455',   court: 'АС г. Москвы', note: 'В архиве',            status: 'archived', createdAt: Date.now() }
           ];
           this.save();
         }
@@ -167,11 +180,31 @@
         this.render();
       },
 
+      // Плавное сворачивание/разворачивание
       toggleForm(force) {
-        const form = document.getElementById('cases-form');
-        const show = (typeof force === 'boolean') ? force : form.hidden;
-        form.hidden = !show;
-        if (show) document.getElementById('cases-number').focus();
+        const wrap = document.getElementById('cases-form-wrap');
+        const btn  = document.getElementById('cases-add-btn');
+        const isOpen = wrap.classList.contains('open');
+        const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
+
+        if (shouldOpen === isOpen) return;
+
+        // подготовка
+        wrap.style.overflow = 'hidden';
+        if (shouldOpen) {
+          wrap.classList.add('open');
+          // сначала вычисляем высоту
+          wrap.style.maxHeight = wrap.scrollHeight + 'px';
+          setExpanded(btn, wrap, true);
+        } else {
+          // зафиксировать текущую высоту и потом анимировать к 0
+          wrap.style.maxHeight = wrap.scrollHeight + 'px';
+          requestAnimationFrame(() => { wrap.style.maxHeight = '0px'; });
+          setExpanded(btn, wrap, false);
+          wrap.addEventListener('transitionend', () => {
+            wrap.classList.remove('open');
+          }, { once: true });
+        }
       },
 
       submit(ev) {
@@ -180,15 +213,15 @@
         const debtor = document.getElementById('cases-debtor').value.trim();
         const inn    = document.getElementById('cases-inn').value.trim();
         const court  = document.getElementById('cases-court').value.trim();
-        const next   = document.getElementById('cases-next').value;
+        const note   = document.getElementById('cases-note').value.trim();
         const status = document.getElementById('cases-status').value;
 
         if (!number || !debtor) { alert('Заполни обязательные поля: Номер дела и Должник.'); return; }
-        if (inn && !( /^\d{10}$/.test(inn) || /^\d{12}$/.test(inn) )) { alert('ИНН должен содержать 10 или 12 цифр.'); return; }
+        if (inn && !( /^\\d{10}$/.test(inn) || /^\\d{12}$/.test(inn) )) { alert('ИНН должен содержать 10 или 12 цифр.'); return; }
 
         this.data.push({
           id: String(Date.now()),
-          number, debtor, inn, court, next,
+          number, debtor, inn, court, note,
           status: status === 'archived' ? 'archived' : 'active',
           createdAt: Date.now()
         });
@@ -199,7 +232,7 @@
       },
 
       clearForm() {
-        ['cases-number','cases-debtor','cases-inn','cases-court','cases-next'].forEach(id => {
+        ['cases-number','cases-debtor','cases-inn','cases-court','cases-note'].forEach(id => {
           const el = document.getElementById(id); if (el) el.value = '';
         });
         document.getElementById('cases-status').value = 'active';
@@ -217,11 +250,6 @@
         this.save(); this.render();
       },
 
-      formatDate(iso) {
-        if (!iso) return '—';
-        try { return new Date(iso).toLocaleDateString('ru-RU'); } catch(e) { return '—'; }
-      },
-
       render() {
         const list = document.getElementById('cases-list');
         const empty = document.getElementById('cases-empty');
@@ -232,17 +260,14 @@
           items = items.filter(i =>
             i.number.toLowerCase().includes(q) ||
             (i.debtor || '').toLowerCase().includes(q) ||
-            (i.inn || '').includes(q)
+            (i.inn || '').includes(q) ||
+            (i.note || '').toLowerCase().includes(q)
           );
         }
         if (this.state.filter !== 'all') items = items.filter(i => i.status === this.state.filter);
 
-        items.sort((a,b) => {
-          const ad = a.next ? new Date(a.next).getTime() : Infinity;
-          const bd = b.next ? new Date(b.next).getTime() : Infinity;
-          if (ad !== bd) return ad - bd;
-          return b.createdAt - a.createdAt;
-        });
+        // без поля "следующее заседание" сортируем по дате создания (новые выше)
+        items.sort((a,b) => b.createdAt - a.createdAt);
 
         if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
         empty.hidden = true;
@@ -260,9 +285,7 @@
               <span><strong>ИНН:</strong> ${i.inn || '—'}</span>
               <span><strong>Суд:</strong> ${i.court || '—'}</span>
             </div>
-            <div class="case-row">
-              <span><strong>Следующее заседание:</strong> ${this.formatDate(i.next)}</span>
-            </div>
+            ${i.note ? `<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>` : ''}
             <div class="case-actions">
               <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
                 ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
@@ -279,7 +302,7 @@
   })();
   </script>
 
-  <!-- Маленький «триггер», который безопасно исполняет код выше -->
+  <!-- Триггер выполняет код выше -->
   <img alt="" aria-hidden="true" style="display:none"
        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
        onload='(function(){var s=document.getElementById("cases-inline-js"); if(s){ new Function(s.textContent)(); }})();' />
