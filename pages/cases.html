@@ -1,4 +1,313 @@
-<section class="page" aria-labelledby="cases-title">
+<section class="page cases" id="cases-page" aria-labelledby="cases-title">
   <h1 id="cases-title">Дела</h1>
-  <p>Здесь появится список дел и быстрый поиск по номеру/ИНН.</p>
+
+  <!-- Панель инструментов -->
+  <div class="cases-toolbar" role="region" aria-label="Поиск и действия">
+    <div class="cases-search">
+      <input id="cases-search-input" type="search" placeholder="Номер дела, ИНН или должник"
+             aria-label="Поиск по делам" oninput="CASES && CASES.setQuery(this.value)" />
+      <button class="ghost" aria-label="Очистить поиск"
+              onclick="CASES && CASES.setQuery(''); const i=document.getElementById('cases-search-input'); i.value=''; i.focus();">✕</button>
+    </div>
+    <button class="primary" id="cases-add-btn" onclick="CASES && CASES.toggleForm()">Добавить</button>
+  </div>
+
+  <!-- Фильтры -->
+  <div class="cases-filters" role="tablist" aria-label="Фильтр по статусу">
+    <button role="tab" class="chip active" data-filter="all" onclick="CASES && CASES.setFilter('all')">Все</button>
+    <button role="tab" class="chip" data-filter="active" onclick="CASES && CASES.setFilter('active')">Активные</button>
+    <button role="tab" class="chip" data-filter="archived" onclick="CASES && CASES.setFilter('archived')">Архив</button>
+  </div>
+
+  <!-- Форма добавления -->
+  <form id="cases-form" class="cases-form" onsubmit="CASES && CASES.submit(event)" hidden>
+    <div class="grid">
+      <label>
+        <span>Номер дела *</span>
+        <input type="text" id="cases-number" required placeholder="А40-12345/2025" />
+      </label>
+      <label>
+        <span>Должник *</span>
+        <input type="text" id="cases-debtor" required placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
+      </label>
+      <label>
+        <span>ИНН</span>
+        <input type="text" id="cases-inn" inputmode="numeric" pattern="\\d{10}|\\d{12}" placeholder="10 или 12 цифр" />
+      </label>
+      <label>
+        <span>Суд</span>
+        <input type="text" id="cases-court" placeholder="АС г. Москвы" />
+      </label>
+      <label>
+        <span>Следующее заседание</span>
+        <input type="date" id="cases-next" />
+      </label>
+      <label>
+        <span>Статус</span>
+        <select id="cases-status">
+          <option value="active" selected>Активное</option>
+          <option value="archived">Архив</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="ghost" onclick="CASES && CASES.toggleForm(false)">Отмена</button>
+      <button type="submit" class="primary">Сохранить</button>
+    </div>
+  </form>
+
+  <!-- Список дел -->
+  <div id="cases-list" class="cases-list" role="list"></div>
+
+  <!-- Пустое состояние -->
+  <div id="cases-empty" class="cases-empty" hidden>
+    <div class="emoji" aria-hidden="true">📁</div>
+    <div class="title">Пока нет дел</div>
+    <div class="hint">Добавь первое дело по номеру или ИНН — и начнём работать.</div>
+    <button class="primary" onclick="CASES && CASES.toggleForm(true)">Добавить дело</button>
+  </div>
+
+  <!-- Стили ТОЛЬКО для этой вкладки -->
+  <style>
+    #cases-page { gap: 14px; }
+    .cases-toolbar {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+    }
+    .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+    .cases-search input {
+      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
+      background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);
+      outline: none;
+    }
+    .cases-search input:focus { border-color: var(--app-accent); }
+    .cases-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      border: 1px solid var(--separator); background: transparent; color: var(--tg-theme-text-color);
+      padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    }
+    .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
+    .cases-form {
+      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
+      border-radius: 16px; padding: 12px; display: grid; gap: 12px;
+    }
+    .cases-form .grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
+    .cases-form input, .cases-form select {
+      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
+      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);
+      outline: none;
+    }
+    .cases-form input:focus, .cases-form select:focus { border-color: var(--app-accent); }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .primary, .ghost {
+      appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+      background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);
+    }
+    .ghost { background: transparent; border-color: var(--separator); color: var(--tg-theme-text-color); }
+    .cases-list { display: grid; gap: 8px; }
+    .case-card {
+      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
+      border-radius: 16px; padding: 12px; display: grid; gap: 6px;
+    }
+    .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .case-number { font-weight: 700; }
+    .badge {
+      font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator);
+      color: var(--tg-theme-hint-color);
+    }
+    .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
+    .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
+    .case-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
+    .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
+    .cases-empty .title { font-weight: 700; margin-bottom: 4px; }
+    .cases-empty .hint { color: var(--tg-theme-hint-color); margin-bottom: 10px; }
+
+    @media (max-width: 520px) {
+      .cases-form .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <!-- Инициализация. ВАЖНО: скрипты во вставках через innerHTML не исполняются,
+       поэтому используем onload у изображения, чтобы выполнить код сразу после вставки -->
+  <img alt="" aria-hidden="true" style="display:none"
+       src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+       onload="
+         (function () {
+           // Глобальный объект только для этой вкладки
+           window.CASES = {
+             LS_KEY: 'tl_cases_v1',
+             data: [],
+             state: { query: '', filter: 'all' },
+
+             init() {
+               try {
+                 const raw = localStorage.getItem(this.LS_KEY);
+                 this.data = raw ? JSON.parse(raw) : [];
+               } catch(e) { this.data = []; }
+
+               // Сид-данные для демонстрации
+               if (!this.data.length) {
+                 this.data = [
+                   { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', next: '2025-09-05', status: 'active', createdAt: Date.now()-20000 },
+                   { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.', inn: '781234567890', court: 'АС СПб', next: '2025-08-28', status: 'active', createdAt: Date.now()-10000 },
+                   { id: String(Date.now()), number: 'А40-22222/2023', debtor: 'ООО «Ромашка»', inn: '7722334455', court: 'АС г. Москвы', next: '', status: 'archived', createdAt: Date.now() }
+                 ];
+                 this.save();
+               }
+               this.render();
+             },
+
+             save() {
+               localStorage.setItem(this.LS_KEY, JSON.stringify(this.data));
+             },
+
+             setQuery(v) {
+               this.state.query = (v || '').toLowerCase();
+               this.render();
+             },
+
+             setFilter(f) {
+               this.state.filter = f;
+               // визуально активная «чипа»
+               document.querySelectorAll('#cases-page .chip').forEach(ch => {
+                 ch.classList.toggle('active', ch.dataset.filter === f);
+                 ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
+               });
+               this.render();
+             },
+
+             toggleForm(force) {
+               const form = document.getElementById('cases-form');
+               const show = (typeof force === 'boolean') ? force : form.hidden;
+               form.hidden = !show;
+               if (show) document.getElementById('cases-number').focus();
+             },
+
+             submit(ev) {
+               ev && ev.preventDefault();
+               const number = document.getElementById('cases-number').value.trim();
+               const debtor = document.getElementById('cases-debtor').value.trim();
+               const inn    = document.getElementById('cases-inn').value.trim();
+               const court  = document.getElementById('cases-court').value.trim();
+               const next   = document.getElementById('cases-next').value;
+               const status = document.getElementById('cases-status').value;
+
+               if (!number || !debtor) {
+                 alert('Заполни обязательные поля: Номер дела и Должник.');
+                 return;
+               }
+               if (inn && !( /^\\d{10}$/.test(inn) || /^\\d{12}$/.test(inn) )) {
+                 alert('ИНН должен содержать 10 или 12 цифр.');
+                 return;
+               }
+
+               const item = {
+                 id: String(Date.now()),
+                 number, debtor, inn, court, next,
+                 status: status === 'archived' ? 'archived' : 'active',
+                 createdAt: Date.now()
+               };
+               this.data.push(item);
+               this.save();
+               this.clearForm();
+               this.toggleForm(false);
+               this.render();
+             },
+
+             clearForm() {
+               ['cases-number','cases-debtor','cases-inn','cases-court','cases-next'].forEach(id => {
+                 const el = document.getElementById(id);
+                 if (el) el.value = '';
+               });
+               document.getElementById('cases-status').value = 'active';
+             },
+
+             toggleArchive(id) {
+               const item = this.data.find(x => x.id === id);
+               if (!item) return;
+               item.status = item.status === 'active' ? 'archived' : 'active';
+               this.save();
+               this.render();
+             },
+
+             remove(id) {
+               if (!confirm('Удалить дело? Действие необратимо.')) return;
+               this.data = this.data.filter(x => x.id !== id);
+               this.save();
+               this.render();
+             },
+
+             formatDate(iso) {
+               if (!iso) return '—';
+               try { return new Date(iso).toLocaleDateString('ru-RU'); } catch(e) { return '—'; }
+             },
+
+             render() {
+               const list = document.getElementById('cases-list');
+               const empty = document.getElementById('cases-empty');
+
+               // фильтрация
+               let items = this.data.slice();
+               const q = this.state.query;
+               if (q) {
+                 items = items.filter(i =>
+                   i.number.toLowerCase().includes(q) ||
+                   (i.debtor || '').toLowerCase().includes(q) ||
+                   (i.inn || '').includes(q)
+                 );
+               }
+               if (this.state.filter !== 'all') {
+                 items = items.filter(i => i.status === this.state.filter);
+               }
+
+               // сортировка: ближайшее заседание вверх; пустые даты — вниз; затем по созданию (новые вверх)
+               items.sort((a,b) => {
+                 const ad = a.next ? new Date(a.next).getTime() : Infinity;
+                 const bd = b.next ? new Date(b.next).getTime() : Infinity;
+                 if (ad !== bd) return ad - bd;
+                 return b.createdAt - a.createdAt;
+               });
+
+               // рендер
+               if (!items.length) {
+                 list.innerHTML = '';
+                 empty.hidden = false;
+                 return;
+               }
+               empty.hidden = true;
+
+               list.innerHTML = items.map(i => `
+                 <article class="case-card" role="listitem" data-id="${i.id}">
+                   <div class="case-head">
+                     <div class="case-number">${i.number}</div>
+                     <div class="badge ${i.status === 'active' ? 'active' : ''}">
+                       ${i.status === 'active' ? 'Активное' : 'Архив'}
+                     </div>
+                   </div>
+                   <div class="case-row">
+                     <span><strong>Должник:</strong> ${i.debtor || '—'}</span>
+                     <span><strong>ИНН:</strong> ${i.inn || '—'}</span>
+                     <span><strong>Суд:</strong> ${i.court || '—'}</span>
+                   </div>
+                   <div class="case-row">
+                     <span><strong>Следующее заседание:</strong> ${this.formatDate(i.next)}</span>
+                   </div>
+                   <div class="case-actions">
+                     <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
+                       ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
+                     </button>
+                     <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
+                   </div>
+                 </article>
+               `).join('');
+             }
+           };
+
+           // Автоинициализация при вставке вкладки
+           window.CASES.init();
+         })();
+       ">
 </section>
