@@ -2,30 +2,36 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1,
-                 user-scalable=no, viewport-fit=cover" />
-  <title>URist — мини-приложение</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Юристы — Банкротство (Mini App)</title>
+  <link rel="stylesheet" href="css/styles.css" />
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- Стили (меняй версию v=… чтобы пробивать кэш) -->
-  <link rel="stylesheet" href="./css/styles.css?v=1">
 </head>
 <body>
-  <div id="app">
-    <main id="content" role="main" aria-live="polite"></main>
+  <noscript>Для работы приложения нужен JavaScript.</noscript>
 
-    <nav class="tabbar" role="tablist" aria-label="Нижняя навигация">
-      <button class="tab-btn active" data-page="cases" aria-selected="true" role="tab">Дела</button>
-      <button class="tab-btn" data-page="hearings" role="tab">Заседания</button>
-      <button class="tab-btn" data-page="tasks" role="tab">Задачи</button>
-      <button class="tab-btn" data-page="profile" role="tab">Профиль</button>
-    </nav>
-  </div>
+  <main id="content" role="main" aria-live="polite"></main>
 
-  <!-- Логика (тоже с версией для кэша) -->
-  <script src="./js/app.js?v=1"></script>
+  <nav class="tabbar" role="tablist" aria-label="Главная навигация">
+    <button class="tab active" data-page="cases" role="tab" aria-selected="true">
+      <span class="icon" aria-hidden="true">📁</span>
+      <span class="label">Дела</span>
+    </button>
+    <button class="tab" data-page="hearings" role="tab" aria-selected="false">
+      <span class="icon" aria-hidden="true">🗓️</span>
+      <span class="label">Заседания</span>
+    </button>
+    <button class="tab" data-page="tasks" role="tab" aria-selected="false">
+      <span class="icon" aria-hidden="true">✅</span>
+      <span class="label">Задачи</span>
+    </button>
+    <button class="tab" data-page="profile" role="tab" aria-selected="false">
+      <span class="icon" aria-hidden="true">⚙️</span>
+      <span class="label">Профиль</span>
+    </button>
+  </nav>
+
+  <script src="js/app.js" defer></script>
 </body>
 </html>

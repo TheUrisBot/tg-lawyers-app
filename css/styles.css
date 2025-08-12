@@ -1,114 +1,97 @@
-:root{
-  /* безопасные дефолты; JS может их подправить под тему Telegram */
-  --bg:       #0f1012;      /* фон страницы */
-  --surface:  #1b1d20;      /* карточки, таббар, поля */
-  --control:  #212428;      /* фон инпутов */
-  --fg:       #f2f2f2;      /* основной текст */
-  --muted:    #a9b0b7;      /* подсказки */
-  --accent:   #4da3ff;      /* акцент */
-  --divider:  rgba(255,255,255,0.12);
+:root {
+  /* Фоллбеки, Telegram подтянет свои цвета через themeParams */
+  --tg-theme-bg-color: #0f0f0f;
+  --tg-theme-text-color: #ffffff;
+  --tg-theme-hint-color: #b0b0b0;
+  --tg-theme-link-color: #2aabee;
+  --tg-theme-button-color: #2aabee;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #151515;
+
+  --app-accent: var(--tg-theme-link-color);
+  --separator: rgba(255,255,255,0.08);
+  --shadow: 0 -1px 0 var(--separator);
+  --tabbar-height: 64px;
 }
 
-html, body { height: 100%; }
+* { box-sizing: border-box; }
 
-body{
+html, body {
+  height: 100%;
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  line-height: 1.45;
-  color-scheme: light dark;
+  padding: 0;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  /* запас под нижнюю панель + безопасная зона на iOS */
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
   -webkit-tap-highlight-color: transparent;
 }
 
-#app{
-  min-height: 100vh;   /* фолбэк */
-  min-height: 100svh;  /* точная высота в мобильных вебвью */
-  display: grid;
-  grid-template-rows: 1fr auto;
-}
-
-#content{
+#content {
   padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  box-sizing: border-box;
+  min-height: 100vh;
 }
 
-/* --- Нижняя навигация --- */
-.tabbar{
-  position: sticky;
-  bottom: 0;
-  left: 0; right: 0;
+.page {
+  display: grid;
+  gap: 12px;
+}
+
+.page h1 {
+  font-size: 20px;
+  margin: 6px 0 2px;
+}
+
+.page p {
+  margin: 0;
+  color: var(--tg-theme-hint-color);
+}
+
+/* Нижняя навигация */
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: var(--tabbar-height);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  background: var(--surface);          /* ПЛОТНЫЙ цвет, без прозрачностей */
-  border-top: 1px solid var(--divider);
-  padding: 8px 8px max(8px, env(safe-area-inset-bottom, 0px));
+  background: var(--tg-theme-secondary-bg-color);
+  border-top: 1px solid var(--separator);
+  box-shadow: var(--shadow);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 1000;
 }
 
-.tab-btn{
+.tabbar .tab {
   appearance: none;
-  background: none;
+  background: transparent;
   border: 0;
-  color: var(--muted);
-  padding: 10px 6px;
-  font-size: 14px;
+  margin: 0;
+  padding: 6px 4px 8px;
+  color: var(--tg-theme-hint-color);
+  font: inherit;
+  display: grid;
+  place-items: center;
+  gap: 2px;
   cursor: pointer;
-}
-.tab-btn.active{
-  color: var(--fg);
-  border-top: 2px solid var(--accent);
-}
-
-/* --- Контент и карточки --- */
-.page{ display: grid; gap: 12px; }
-.page h1{ margin: 0 0 8px; font-size: 20px; }
-
-.card{
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-/* --- Формы --- */
-input, select, textarea{
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--control);
-  color: var(--fg);
-  border: 1px solid var(--divider);
   outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-  caret-color: var(--accent);
-}
-textarea{ min-height: 96px; resize: vertical; }
-input::placeholder, textarea::placeholder{ color: var(--muted); opacity: .9; }
-
-input:focus-visible, select:focus-visible, textarea:focus-visible{
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(77,163,255,.35);
 }
 
-/* iOS/Telegram WebView фолбэки */
-@supports (-webkit-touch-callout: none){
-  input, select, textarea{
-    -webkit-text-fill-color: var(--fg);
-    background: var(--control) !important;
-    border-color: var(--divider) !important;
-  }
-  input:-webkit-autofill,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill{
-    -webkit-text-fill-color: var(--fg);
-    box-shadow: 0 0 0 1000px var(--control) inset !important;
-  }
+.tabbar .tab .icon { font-size: 18px; line-height: 1; }
+.tabbar .tab .label { font-size: 12px; line-height: 1.1; }
+
+.tabbar .tab.active {
+  color: var(--app-accent);
+  font-weight: 600;
 }
 
-/* UX-мелочи */
-*{ -webkit-tap-highlight-color: transparent; }
-img, a img{ -webkit-user-drag: none; user-drag: none; }
+.tabbar .tab:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: -4px;
+  border-radius: 12px;
+}
