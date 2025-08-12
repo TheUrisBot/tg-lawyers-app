@@ -495,7 +495,7 @@
               ${i.note ? `<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>` : ''}
               <div class="case-actions">
                 <button class="ghost" onclick="TASKS && TASKS.toggleDone('${i.id}')">
-                  ${i.done ? 'Снять «Выполнено»' : 'Отметить «Выполнено»'}
+                  ${i.done ? 'Снять «Выполнено»' : '«Выполнено»'}
                 </button>
                 <button class="ghost" onclick="TASKS && TASKS.edit('${i.id}')">Редактировать</button>
                 <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>
