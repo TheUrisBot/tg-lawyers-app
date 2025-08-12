@@ -24,9 +24,11 @@
   <div id="hearings-form-wrap" class="collapse" aria-hidden="true">
     <form id="hearings-form" class="cases-form" onsubmit="HEARINGS && HEARINGS.submit(event)">
       <div class="grid">
-        <label>
+        <label class="has-suggest">
           <span>Номер дела *</span>
-          <input type="text" id="h-case" required placeholder="А40-12345/2025" />
+          <input type="text" id="h-case" required placeholder="А40-12345/2025" autocomplete="off" />
+          <!-- Подсказки по делам из cases -->
+          <div id="h-case-suggest" class="suggest" role="listbox" hidden></div>
         </label>
         <label>
           <span>Должник</span>
@@ -78,9 +80,8 @@
     <button class="primary" onclick="HEARINGS && HEARINGS.toggleForm(true)">Добавить заседание</button>
   </div>
 
-  <!-- Стили: используем те же токены, что и на вкладке "Дела" -->
+  <!-- Стили -->
   <style>
-    /* заимствуем классы из cases.html для единства дизайна */
     .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
     .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
     .cases-search input {
@@ -117,7 +118,7 @@
     .cases-list { display: grid; gap: 8px; }
     .case-card {
       border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 6px;
+      border-radius: 16px; padding: 12px; display: grid; gap: 6px; position: relative;
     }
     .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     .case-number { font-weight: 700; }
@@ -129,14 +130,45 @@
     .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
     .case-actions { display: flex; gap: 8px; margin-top: 6px; }
 
+    /* Пустое состояние */
+    .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
+    .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
+    .cases-empty .title { font-weight: 700; margin-bottom: 4px; }
+    .cases-empty .hint { color: var(--tg-theme-hint-color); margin-bottom: 10px; }
+
+    /* Подсветка "сегодня" */
+    .case-card.today { box-shadow: 0 0 0 1px var(--app-accent) inset; }
+    .pill {
+      display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 999px;
+      border: 1px solid var(--app-accent); color: var(--app-accent);
+    }
+    .today-pill { margin-left: 6px; }
+
+    /* Подсказки по номеру дела */
+    .has-suggest { position: relative; }
+    .suggest {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+      background: var(--tg-theme-bg-color); border: 1px solid var(--separator);
+      border-radius: 12px; margin-top: 6px; max-height: 220px; overflow: auto;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    }
+    .suggest-item {
+      padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px;
+    }
+    .suggest-item:hover, .suggest-item[aria-selected="true"] { background: var(--tg-theme-secondary-bg-color); }
+    .suggest-item .hint { color: var(--tg-theme-hint-color); font-size: 12px; }
+
     @media (max-width: 520px) {
       .cases-form .grid { grid-template-columns: 1fr; }
+      .suggest { max-height: 50vh; }
     }
   </style>
 
   <!-- Логика (инертный скрипт) -->
   <script type="text/plain" id="hearings-inline-js">
   (function () {
+    const DAY = 24*60*60*1000;
+
     function setExpanded(btn, wrap, open) {
       btn?.setAttribute('aria-expanded', String(open));
       wrap?.setAttribute('aria-hidden', String(!open));
@@ -144,7 +176,7 @@
     const nowTs = () => Date.now();
     function toTs(dateStr, timeStr) {
       if (!dateStr) return NaN;
-      const t = timeStr && timeStr.match(/^\\d{2}:\\d{2}$/) ? timeStr : '00:00';
+      const t = timeStr && /^\d{2}:\d{2}$/.test(timeStr) ? timeStr : '00:00';
       const iso = dateStr + 'T' + t + ':00';
       const ts = Date.parse(iso);
       return isNaN(ts) ? NaN : ts;
@@ -153,29 +185,74 @@
       if (!dateStr) return '—';
       try { return new Date(dateStr).toLocaleDateString('ru-RU'); } catch (_) { return '—'; }
     }
-    function fmtTime(timeStr) { return timeStr ? timeStr : '—'; }
+    function isSameDay(dateStr) {
+      if (!dateStr) return false;
+      try {
+        const d = new Date(dateStr);
+        const n = new Date();
+        return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+      } catch (_) { return false; }
+    }
+
+    // Дела из cases (для подсказок)
+    function loadCasesIndex() {
+      try {
+        const raw = localStorage.getItem('tl_cases_v1');
+        if (!raw) return [];
+        const arr = JSON.parse(raw) || [];
+        const map = new Map();
+        arr.forEach(c => {
+          if (!c || !c.number) return;
+          const key = String(c.number).trim();
+          if (!map.has(key)) map.set(key, { number: key, debtor: c.debtor || '', court: c.court || '' });
+        });
+        return Array.from(map.values());
+      } catch (_) { return []; }
+    }
+
+    function buildSuggestions($box, casesIndex, query) {
+      if (!$box) return;
+      const q = (query || '').toLowerCase().trim();
+      let items = [];
+      if (!q) items = casesIndex.slice(0, 7);
+      else items = casesIndex.filter(c => c.number.toLowerCase().includes(q)).slice(0, 7);
+
+      if (!items.length) { $box.hidden = true; $box.innerHTML=''; return; }
+      $box.innerHTML = items.map(c => `
+        <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor}" data-court="${c.court}">
+          <span>${c.number}</span>
+          <span class="hint">${c.debtor || ''}</span>
+        </div>
+      `).join('');
+      $box.hidden = false;
+    }
 
     window.HEARINGS = {
       LS_KEY: 'tl_hearings_v1',
       data: [],
       state: { query: '', filter: 'all' },
       editingId: null,
+      casesIndex: [],
 
       init() {
+        this.casesIndex = loadCasesIndex();
+
         try {
           const raw = localStorage.getItem(this.LS_KEY);
           this.data = raw ? JSON.parse(raw) : [];
         } catch(e) { this.data = []; }
 
         if (!this.data.length) {
-          // seed
           this.data = [
-            { id: String(Date.now()-3), caseNumber: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', date: '2025-09-05', time: '10:00', court: 'АС г. Москвы', place: 'Зал 2', note: 'Первое заседание', status: 'active', createdAt: Date.now()-30000 },
-            { id: String(Date.now()-2), caseNumber: 'А56-9876/2024',  debtor: 'Иванов И.И.',      date: '2025-08-20', time: '14:30', court: 'АС СПб',       place: 'Зал 5', note: '',                 status: 'active', createdAt: Date.now()-20000 },
-            { id: String(Date.now()-1), caseNumber: 'А40-22222/2023', debtor: 'ООО «Ромашка»',    date: '2024-12-10', time: '11:00', court: 'АС г. Москвы', place: '',     note: 'В архиве',         status: 'archived', createdAt: Date.now()-10000 }
+            { id: String(Date.now()-3), caseNumber: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', date: '2025-09-05', time: '10:00', court: 'АС г. Москвы', place: 'Зал 2', note: 'Первое заседание', status: 'active', createdAt: Date.now()-30000, updatedAt: Date.now()-30000 },
+            { id: String(Date.now()-2), caseNumber: 'А56-9876/2024',  debtor: 'Иванов И.И.',      date: '2025-08-20', time: '14:30', court: 'АС СПб',       place: 'Зал 5', note: '',                 status: 'active', createdAt: Date.now()-20000, updatedAt: Date.now()-20000 },
+            { id: String(Date.now()-1), caseNumber: 'А40-22222/2023', debtor: 'ООО «Ромашка»',    date: '2024-12-10', time: '11:00', court: 'АС г. Москвы', place: '',     note: 'В архиве',         status: 'archived', createdAt: Date.now()-10000, updatedAt: Date.now()-10000 }
           ];
           this.save();
         }
+
+        this.autoArchiveStale();
+        this.initCaseSuggest();
         this.render();
       },
 
@@ -197,7 +274,6 @@
         const btn  = document.getElementById('hearings-add-btn');
         const isOpen = wrap.classList.contains('open');
         const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
-
         if (shouldOpen === isOpen) return;
 
         wrap.style.overflow = 'hidden';
@@ -215,6 +291,33 @@
             HEARINGS.cancelEdit();
           }, { once: true });
         }
+      },
+
+      // Подсказки по номеру дела
+      initCaseSuggest() {
+        const input = document.getElementById('h-case');
+        const box   = document.getElementById('h-case-suggest');
+        if (!input || !box) return;
+
+        const update = () => buildSuggestions(box, this.casesIndex, input.value);
+
+        input.addEventListener('input', update);
+        input.addEventListener('focus', update);
+        input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 120));
+
+        box.addEventListener('mousedown', (e) => {
+          const item = e.target.closest('.suggest-item');
+          if (!item) return;
+          const number = item.getAttribute('data-number') || '';
+          const debtor = item.getAttribute('data-debtor') || '';
+          const court  = item.getAttribute('data-court') || '';
+          input.value = number;
+          const d = document.getElementById('h-debtor');
+          const c = document.getElementById('h-court');
+          if (d && !d.value && debtor) d.value = debtor;
+          if (c && !c.value && court)  c.value  = court;
+          box.hidden = true;
+        });
       },
 
       // Редактирование
@@ -261,20 +364,22 @@
           const idx = this.data.findIndex(x => x.id === this.editingId);
           if (idx !== -1) {
             const prev = this.data[idx];
-            this.data[idx] = { ...prev, caseNumber, debtor, date, time, court, place, note, status };
+            this.data[idx] = { ...prev, caseNumber, debtor, date, time, court, place, note, status, updatedAt: Date.now() };
           }
         } else {
           this.data.push({
             id: String(Date.now()),
             caseNumber, debtor, date, time, court, place, note,
             status: status === 'archived' ? 'archived' : 'active',
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            updatedAt: Date.now()
           });
         }
 
         this.save();
         this.cancelEdit();
         this.toggleForm(false);
+        this.autoArchiveStale(); // на случай прошлых дат
         this.render();
       },
 
@@ -288,6 +393,7 @@
       toggleArchive(id) {
         const item = this.data.find(x => x.id === id); if (!item) return;
         item.status = item.status === 'active' ? 'archived' : 'active';
+        item.updatedAt = Date.now();
         this.save(); this.render();
       },
 
@@ -297,7 +403,24 @@
         this.save(); this.render();
       },
 
-      // предстоящие/прошедшие
+      // Автоархив: >3 дней после даты заседания и запись не менялась после времени заседания
+      autoArchiveStale() {
+        const now = nowTs();
+        let changed = false;
+        this.data.forEach(i => {
+          if (i.status !== 'active') return;
+          const ts = toTs(i.date, i.time);
+          if (isNaN(ts)) return;
+          const threshold = ts + 3*DAY;
+          const upd = i.updatedAt || i.createdAt || 0;
+          if (now >= threshold && upd < ts) {
+            i.status = 'archived';
+            changed = true;
+          }
+        });
+        if (changed) this.save();
+      },
+
       isUpcoming(item) {
         const ts = toTs(item.date, item.time);
         return !isNaN(ts) && ts >= nowTs();
@@ -328,23 +451,13 @@
           items = items.filter(i => i.status !== 'archived' && !this.isUpcoming(i));
         }
 
-        // Сортировка:
-        // - в смешанном списке: предстоящие (раньше) -> прошедшие (позже)
-        // - в "Предстоящие": по возрастанию даты
-        // - в "Прошедшие": по убыванию даты
         const now = nowTs();
         items.sort((a,b) => {
           const at = toTs(a.date, a.time), bt = toTs(b.date, b.time);
           const aFuture = !isNaN(at) && at >= now;
           const bFuture = !isNaN(bt) && bt >= now;
-
-          if (this.state.filter === 'upcoming') {
-            return at - bt;
-          }
-          if (this.state.filter === 'past') {
-            return bt - at;
-          }
-          // смешанный: будущее вверх, среди будущего по возрастанию; среди прошедших — по убыванию
+          if (this.state.filter === 'upcoming') return at - bt;
+          if (this.state.filter === 'past')     return bt - at;
           if (aFuture !== bFuture) return aFuture ? -1 : 1;
           return aFuture ? (at - bt) : (bt - at);
         });
@@ -356,10 +469,11 @@
           const ts = toTs(i.date, i.time);
           const upcoming = !isNaN(ts) && ts >= now;
           const dt = `${fmtDate(i.date)} ${i.time ? i.time : ''}`.trim();
+          const today = isSameDay(i.date);
           return `
-            <article class="case-card" role="listitem" data-id="${i.id}">
+            <article class="case-card ${today ? 'today' : ''}" role="listitem" data-id="${i.id}">
               <div class="case-head">
-                <div class="case-number">${i.caseNumber}</div>
+                <div class="case-number">${i.caseNumber}${today ? '<span class="pill today-pill">Сегодня</span>' : ''}</div>
                 <div class="badge ${i.status === 'active' ? 'active' : ''}">
                   ${i.status === 'active' ? (upcoming ? 'Предстоящие' : 'Прошедшие') : 'Архив'}
                 </div>
