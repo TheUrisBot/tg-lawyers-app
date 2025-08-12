@@ -80,7 +80,7 @@
     <button class="primary" onclick="TASKS && TASKS.toggleForm(true)">Добавить задачу</button>
   </div>
 
-  <!-- Стили (совпадают с hearings) -->
+  <!-- Стили (переносы + адаптивные кнопки) -->
   <style>
     .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
     .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
@@ -121,14 +121,22 @@
       border-radius: 16px; padding: 12px; display: grid; gap: 6px; position: relative;
     }
     .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-    .case-number { font-weight: 700; }
+    .case-number { font-weight: 700; overflow-wrap: anywhere; }
     .badge {
       font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator);
       color: var(--tg-theme-hint-color);
     }
     .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
     .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
-    .case-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .case-row span { min-width: 0; overflow-wrap: anywhere; }
+
+    /* Кнопки действий — адаптивная сетка */
+    .case-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px; margin-top: 6px;
+    }
+    .case-actions .ghost { width: 100%; }
 
     .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
     .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
@@ -184,7 +192,6 @@
       } catch(_) { return false; }
     }
 
-    // Индекс дел из cases (для подсказок)
     function loadCasesIndex() {
       try {
         const raw = localStorage.getItem('tl_cases_v1');
@@ -232,19 +239,15 @@
         if (!this.data.length) {
           // seed
           this.data = [
-            { id: String(Date.now()-3), title: 'Подготовить отзыв', caseNumber: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', date: '2025-08-25', time: '18:00', note: '', status: 'active', done: false, createdAt: Date.now()-30000, updatedAt: Date.now()-30000 },
-            { id: String(Date.now()-2), title: 'Направить ходатайство', caseNumber: 'А56-9876/2024', debtor: 'Иванов И.И.', date: '2025-08-10', time: '', note: 'Почта/ГАС Правосудие', status: 'active', done: true, createdAt: Date.now()-20000, updatedAt: Date.now()-20000 },
-            { id: String(Date.now()-1), title: 'Сверка документов', caseNumber: 'А40-22222/2023', debtor: 'ООО «Ромашка»', date: '2024-12-10', time: '11:00', note: 'В архиве', status: 'archived', done: false, createdAt: Date.now()-10000, updatedAt: Date.now()-10000 }
+            { id: String(Date.now()-3), title: 'Подготовить отзыв', caseNumber: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', date: '2025-08-25', time: '18:00', note: '', status: 'active', done: false, doneAt: null, createdAt: Date.now()-30000, updatedAt: Date.now()-30000 },
+            { id: String(Date.now()-2), title: 'Направить ходатайство', caseNumber: 'А56-9876/2024', debtor: 'Иванов И.И.', date: '2025-08-10', time: '', note: 'Почта/ГАС Правосудие', status: 'active', done: true,  doneAt: Date.now()-2*DAY, createdAt: Date.now()-20000, updatedAt: Date.now()-20000 },
+            { id: String(Date.now()-1), title: 'Сверка документов', caseNumber: 'А40-22222/2023', debtor: 'ООО «Ромашка»', date: '2024-12-10', time: '11:00', note: 'В архиве', status: 'archived', done: false, doneAt: null, createdAt: Date.now()-10000, updatedAt: Date.now()-10000 }
           ];
           this.save();
         }
 
-        // автоархив
-        this.autoArchiveStale();
-
-        // подсказки
-        this.initCaseSuggest();
-
+        this.autoArchiveRules();   // автоархив по всем правилам
+        this.initCaseSuggest();    // автодополнение номера дела
         this.render();
       },
 
@@ -261,7 +264,6 @@
         this.render();
       },
 
-      // Сворачивание/разворачивание формы
       toggleForm(force) {
         const wrap = document.getElementById('tasks-form-wrap');
         const btn  = document.getElementById('tasks-add-btn');
@@ -288,7 +290,6 @@
         }
       },
 
-      // Подсказки по делу
       initCaseSuggest() {
         const input = document.getElementById('t-case');
         const box   = document.getElementById('t-case-suggest');
@@ -361,6 +362,7 @@
             title, caseNumber, debtor, date, time, note,
             status: status === 'archived' ? 'archived' : 'active',
             done: false,
+            doneAt: null,
             createdAt: Date.now(),
             updatedAt: Date.now()
           });
@@ -369,7 +371,7 @@
         this.save();
         this.cancelEdit();
         this.toggleForm(false);
-        this.autoArchiveStale(); // на случай старых дат
+        this.autoArchiveRules(); // вдруг дата старая или уже «готово»
         this.render();
       },
 
@@ -380,18 +382,14 @@
         document.getElementById('t-status').value = 'active';
       },
 
-      toggleArchive(id) {
-        const item = this.data.find(x => x.id === id); if (!item) return;
-        item.status = item.status === 'active' ? 'archived' : 'active';
-        item.updatedAt = Date.now();
-        this.save(); this.render();
-      },
-
       toggleDone(id) {
         const item = this.data.find(x => x.id === id); if (!item) return;
         item.done = !item.done;
+        item.doneAt = item.done ? Date.now() : null;
         item.updatedAt = Date.now();
-        this.save(); this.render();
+        this.save();
+        this.autoArchiveRules(); // правило «готово > 1 дня»
+        this.render();
       },
 
       remove(id) {
@@ -400,21 +398,32 @@
         this.save(); this.render();
       },
 
-      // Автоархив: > 3 дней после срока и запись не менялась после срока и задача не выполнена
-      autoArchiveStale() {
+      // Автоархив:
+      // 1) «Выполнено» более 1 суток -> архив
+      // 2) > 3 дней после срока, запись не менялась после срока и не «Выполнено»
+      autoArchiveRules() {
         const now = nowTs();
         let changed = false;
+
         this.data.forEach(i => {
-          if (i.status !== 'active' || i.done) return;
-          const ts = toTs(i.date, i.time);
-          if (isNaN(ts)) return;
-          const threshold = ts + 3*DAY;
+          if (i.status !== 'active') return;
+          const deadlineTs = toTs(i.date, i.time);
           const upd = i.updatedAt || i.createdAt || 0;
-          if (now >= threshold && upd < ts) {
+
+          if (i.done && i.doneAt && now - i.doneAt >= DAY) {
             i.status = 'archived';
             changed = true;
+            return;
+          }
+          if (!isNaN(deadlineTs)) {
+            const threshold = deadlineTs + 3*DAY;
+            if (now >= threshold && upd < deadlineTs && !i.done) {
+              i.status = 'archived';
+              changed = true;
+            }
           }
         });
+
         if (changed) this.save();
       },
 
@@ -487,9 +496,6 @@
               <div class="case-actions">
                 <button class="ghost" onclick="TASKS && TASKS.toggleDone('${i.id}')">
                   ${i.done ? 'Снять «Выполнено»' : 'Отметить «Выполнено»'}
-                </button>
-                <button class="ghost" onclick="TASKS && TASKS.toggleArchive('${i.id}')">
-                  ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
                 </button>
                 <button class="ghost" onclick="TASKS && TASKS.edit('${i.id}')">Редактировать</button>
                 <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>
