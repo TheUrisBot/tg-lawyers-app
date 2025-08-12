@@ -95,3 +95,12 @@ body {
   outline-offset: -4px;
   border-radius: 12px;
 }
+/* Блокируем жесты масштабирования, дабл-тап-зуум и авто-расширение текста */
+html, body {
+  touch-action: manipulation;   /* запрет pinch/дабл-тап в Chromium WebView */
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+/* Дополнительно: убираем вспышку подсветки при тапе на iOS/Android */
+* { -webkit-tap-highlight-color: transparent; }

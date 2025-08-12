@@ -93,3 +93,43 @@
     loadPage(startPage);
   });
 })();
+function disableZoom() {
+  // 1) iOS Safari/Telegram WebView: жесты масштабирования
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+    document.addEventListener(evt, e => e.preventDefault(), { passive: false });
+  });
+
+  // 2) Мультитач (pinch) — на всякий случай
+  document.addEventListener('touchstart', e => {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  // 3) Дабл-тап зум
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // 4) Двойной клик мышью (десктоп)
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
+  // 5) Ctrl/Cmd + колесо мыши
+  document.addEventListener('wheel', e => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+
+  // 6) Горячие клавиши масштабирования (Ctrl/Cmd +/-/0)
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+      e.preventDefault();
+    }
+  });
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+  disableZoom();
+  // ... твой текущий код инициализации
+});
