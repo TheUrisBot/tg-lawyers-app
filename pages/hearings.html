@@ -20,6 +20,14 @@
     <button role="tab" class="chip" data-filter="archived" onclick="HEARINGS && HEARINGS.setFilter('archived')">Архив</button>
   </div>
 
+  <!-- КАЛЕНДАРЬ ТЕКУЩЕГО МЕСЯЦА -->
+  <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (текущий месяц)"></div>
+  <!-- Плашка выбранной даты -->
+  <div id="hearings-day-chip" class="day-chip" hidden>
+    <span id="hearings-day-label"></span>
+    <button class="ghost small" onclick="HEARINGS && HEARINGS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
+  </div>
+
   <!-- Сворачиваемый блок формы -->
   <div id="hearings-form-wrap" class="collapse" aria-hidden="true">
     <form id="hearings-form" class="cases-form" onsubmit="HEARINGS && HEARINGS.submit(event)">
@@ -71,6 +79,7 @@
 
   <!-- Список заседаний -->
   <div id="hearings-list" class="cases-list" role="list"></div>
+  <!-- СПЕЙСЕР, чтобы последняя карточка не пряталась за нижней навигацией -->
   <div class="list-spacer" id="hearings-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
@@ -81,7 +90,7 @@
     <button class="primary" onclick="HEARINGS && HEARINGS.toggleForm(true)">Добавить заседание</button>
   </div>
 
-  <!-- Стили -->
+  <!-- Стили: добавлен календарь -->
   <style>
     .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
     .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
@@ -95,6 +104,31 @@
       padding: 6px 10px; border-radius: 999px; cursor: pointer; }
     .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
 
+    /* Календарь */
+    .cal { border: 1px solid var(--separator); border-radius: 16px; background: var(--tg-theme-secondary-bg-color); padding: 10px; display: grid; gap: 8px; }
+    .cal-head { display: flex; align-items: center; justify-content: space-between; }
+    .cal-title { font-weight: 700; }
+    .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; color: var(--tg-theme-hint-color); font-size: 12px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-day {
+      position: relative; padding: 10px 0; text-align: center; border-radius: 10px; cursor: pointer;
+      user-select: none; background: var(--tg-theme-bg-color); border: 1px solid transparent;
+    }
+    .cal-day.disabled { opacity: .4; cursor: default; }
+    .cal-day.today { outline: 1px dashed var(--app-accent); }
+    .cal-day.selected { border-color: var(--app-accent); box-shadow: 0 0 0 1px var(--app-accent) inset; }
+    .cal-num { font-weight: 600; }
+    .cal-hint { position: absolute; inset: 2px; border-radius: 8px; pointer-events: none; opacity: 0; }
+    /* Уровни насыщенности по количеству дел */
+    .cal-day.has-1 { border-color: var(--app-accent); }
+    .cal-day.has-3 .cal-hint { background: var(--app-accent); opacity: .12; }
+    .cal-day.has-6 .cal-hint { background: var(--app-accent); opacity: .22; }
+    .cal-day.has-10 .cal-hint{ background: var(--app-accent); opacity: .32; }
+
+    .day-chip { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; color: var(--tg-theme-hint-color); }
+    .day-chip .small { padding: 6px 10px; border-radius: 10px; }
+
+    /* Сворачиваемая область */
     .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 240ms ease, opacity 240ms ease; }
     .collapse.open { opacity: 1; }
 
@@ -130,20 +164,6 @@
     .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
     .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
     .case-actions { display: flex; gap: 8px; margin-top: 6px; }
-
-    /* Пустое состояние */
-    .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
-    .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
-    .cases-empty .title { font-weight: 700; margin-bottom: 4px; }
-    .cases-empty .hint { color: var(--tg-theme-hint-color); margin-bottom: 10px; }
-
-    /* Подсветка "сегодня" */
-    .case-card.today { box-shadow: 0 0 0 1px var(--app-accent) inset; }
-    .pill {
-      display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 999px;
-      border: 1px solid var(--app-accent); color: var(--app-accent);
-    }
-    .today-pill { margin-left: 6px; }
 
     /* Подсказки по номеру дела */
     .has-suggest { position: relative; }
@@ -186,6 +206,12 @@
       if (!dateStr) return '—';
       try { return new Date(dateStr).toLocaleDateString('ru-RU'); } catch (_) { return '—'; }
     }
+    function fmtDayLabel(yyyy_mm_dd) {
+      try {
+        const d = new Date(yyyy_mm_dd);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+      } catch(_) { return yyyy_mm_dd; }
+    }
     function isSameDay(dateStr) {
       if (!dateStr) return false;
       try {
@@ -211,27 +237,68 @@
       } catch (_) { return []; }
     }
 
-    function buildSuggestions($box, casesIndex, query) {
-      if (!$box) return;
-      const q = (query || '').toLowerCase().trim();
-      let items = [];
-      if (!q) items = casesIndex.slice(0, 7);
-      else items = casesIndex.filter(c => c.number.toLowerCase().includes(q)).slice(0, 7);
+    // ===== КАЛЕНДАРЬ =====
+    function monthInfo(date) {
+      const y = date.getFullYear();
+      const m = date.getMonth(); // 0..11
+      const first = new Date(y, m, 1);
+      const last  = new Date(y, m + 1, 0);
+      const daysInMonth = last.getDate();
+      // делаем понедельник первым днём недели
+      const dow = (first.getDay() + 6) % 7; // 0=понедельник .. 6=воскресенье
+      return { y, m, daysInMonth, startOffset: dow };
+    }
+    function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+    function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
 
-      if (!items.length) { $box.hidden = true; $box.innerHTML=''; return; }
-      $box.innerHTML = items.map(c => `
-        <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor}" data-court="${c.court}">
-          <span>${c.number}</span>
-          <span class="hint">${c.debtor || ''}</span>
+    function buildCalendarHTML(state, counts) {
+      const ref = new Date(state.calendar.year, state.calendar.month, 1);
+      const { y, m, daysInMonth, startOffset } = monthInfo(ref);
+      const monthName = ref.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+
+      const weekNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+      const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+      let cells = '';
+      for (let i=0; i<totalCells; i++) {
+        const dayNum = i - startOffset + 1;
+        if (dayNum < 1 || dayNum > daysInMonth) {
+          cells += `<div class="cal-day disabled" aria-hidden="true"></div>`;
+          continue;
+        }
+        const dateStr = ymDate(y, m, dayNum);
+        const cnt = counts[dateStr] || 0;
+        let cls = 'cal-day';
+        if (isSameDay(dateStr)) cls += ' today';
+        if (state.selectedDay === dateStr) cls += ' selected';
+        // уровни подсветки
+        if (cnt >= 10) cls += ' has-10';
+        else if (cnt >= 6) cls += ' has-6';
+        else if (cnt >= 3) cls += ' has-3';
+        else if (cnt >= 1) cls += ' has-1';
+
+        cells += `
+          <button type="button" class="${cls}" data-date="${dateStr}" aria-label="${dayNum}. ${monthName}, заседаний: ${cnt}">
+            <div class="cal-hint"></div>
+            <div class="cal-num">${dayNum}</div>
+          </button>
+        `;
+      }
+
+      return `
+        <div class="cal-head">
+          <div class="cal-title">${monthName[0].toUpperCase()+monthName.slice(1)}</div>
         </div>
-      `).join('');
-      $box.hidden = false;
+        <div class="cal-week">${weekNames.map(w => `<div style="text-align:center;">${w}</div>`).join('')}</div>
+        <div class="cal-grid">${cells}</div>
+      `;
     }
 
+    // ===== Основной объект HEARINGS =====
     window.HEARINGS = {
       LS_KEY: 'tl_hearings_v1',
       data: [],
-      state: { query: '', filter: 'all' },
+      state: { query: '', filter: 'all', selectedDay: null, calendar: { year: (new Date()).getFullYear(), month: (new Date()).getMonth() } },
       editingId: null,
       casesIndex: [],
 
@@ -254,7 +321,7 @@
 
         this.autoArchiveStale();
         this.initCaseSuggest();
-        this.render();
+        this.render(); // внутри render построим и календарь
       },
 
       save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
@@ -269,12 +336,21 @@
         this.render();
       },
 
+      // Сброс выбранной в календаре даты
+      clearSelectedDay() {
+        this.state.selectedDay = null;
+        const chip = document.getElementById('hearings-day-chip');
+        if (chip) chip.hidden = true;
+        this.render();
+      },
+
       // Плавное сворачивание/разворачивание
       toggleForm(force) {
         const wrap = document.getElementById('hearings-form-wrap');
         const btn  = document.getElementById('hearings-add-btn');
         const isOpen = wrap.classList.contains('open');
         const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
+
         if (shouldOpen === isOpen) return;
 
         wrap.style.overflow = 'hidden';
@@ -300,8 +376,7 @@
         const box   = document.getElementById('h-case-suggest');
         if (!input || !box) return;
 
-        const update = () => buildSuggestions(box, this.casesIndex, input.value);
-
+        const update = () => this.buildSuggestions(box, input.value);
         input.addEventListener('input', update);
         input.addEventListener('focus', update);
         input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 120));
@@ -319,6 +394,23 @@
           if (c && !c.value && court)  c.value  = court;
           box.hidden = true;
         });
+      },
+
+      buildSuggestions($box, query) {
+        const casesIndex = this.casesIndex || [];
+        const q = (query || '').toLowerCase().trim();
+        let items = [];
+        if (!q) items = casesIndex.slice(0, 7);
+        else items = casesIndex.filter(c => c.number.toLowerCase().includes(q)).slice(0, 7);
+
+        if (!items.length) { $box.hidden = true; $box.innerHTML=''; return; }
+        $box.innerHTML = items.map(c => `
+          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor}" data-court="${c.court}">
+            <span>${c.number}</span>
+            <span class="hint">${c.debtor || ''}</span>
+          </div>
+        `).join('');
+        $box.hidden = false;
       },
 
       // Редактирование
@@ -427,12 +519,55 @@
         return !isNaN(ts) && ts >= nowTs();
       },
 
+      // Подсчёт количества заседаний на каждую дату (для календаря)
+      buildCountsForCalendar() {
+        const counts = {};
+        const ref = new Date(this.state.calendar.year, this.state.calendar.month, 1);
+        const { y, m, daysInMonth } = monthInfo(ref);
+
+        for (let d=1; d<=daysInMonth; d++) {
+          counts[ymDate(y,m,d)] = 0;
+        }
+        this.data.forEach(i => {
+          if (i.status === 'archived') return; // в календарь не считаем архив
+          if (!i.date) return;
+          const dstr = i.date;
+          if (counts.hasOwnProperty(dstr)) counts[dstr] += 1;
+        });
+        return counts;
+      },
+
+      // Рендер календаря и установка обработчиков
+      renderCalendar() {
+        const cal = document.getElementById('hearings-calendar');
+        if (!cal) return;
+        const counts = this.buildCountsForCalendar();
+        cal.innerHTML = buildCalendarHTML(this.state, counts);
+
+        // клики по дням
+        cal.querySelectorAll('.cal-day[data-date]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const date = btn.getAttribute('data-date');
+            // если даты нет в текущем месяце/или 0 заседаний — всё равно покажем (для «пустых» дней — отфильтруется в списке)
+            this.state.selectedDay = date;
+            const chip = document.getElementById('hearings-day-chip');
+            const label = document.getElementById('hearings-day-label');
+            if (chip && label) {
+              label.textContent = fmtDayLabel(date);
+              chip.hidden = false;
+            }
+            this.render(); // перерисуем список и сам календарь (выделение)
+          });
+        });
+      },
+
       render() {
         const list = document.getElementById('hearings-list');
         const empty = document.getElementById('hearings-empty');
 
         let items = this.data.slice();
         const q = this.state.query;
+
         if (q) {
           items = items.filter(i =>
             i.caseNumber.toLowerCase().includes(q) ||
@@ -444,6 +579,12 @@
           );
         }
 
+        // Фильтр по выбранной дате (если нажали день в календаре)
+        if (this.state.selectedDay) {
+          items = items.filter(i => (i.date || '') === this.state.selectedDay);
+        }
+
+        // Чип-фильтры статуса/времени
         if (this.state.filter === 'archived') {
           items = items.filter(i => i.status === 'archived');
         } else if (this.state.filter === 'upcoming') {
@@ -452,6 +593,7 @@
           items = items.filter(i => i.status !== 'archived' && !this.isUpcoming(i));
         }
 
+        // Сортировка
         const now = nowTs();
         items.sort((a,b) => {
           const at = toTs(a.date, a.time), bt = toTs(b.date, b.time);
@@ -463,7 +605,7 @@
           return aFuture ? (at - bt) : (bt - at);
         });
 
-        if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
+        if (!items.length) { list.innerHTML = ''; empty.hidden = false; this.renderCalendar(); window.adjustBottomSpacer && window.adjustBottomSpacer(); return; }
         empty.hidden = true;
 
         list.innerHTML = items.map(i => {
@@ -496,6 +638,12 @@
             </article>
           `;
         }).join('');
+
+        // Перерисовать календарь (выделения и интенсивность)
+        this.renderCalendar();
+
+        // Пересчитать нижний спейсер, чтобы карточки не прятались под таббар
+        window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
 
