@@ -50,7 +50,7 @@
             <button class="ghost"   onclick="PROFILE && PROFILE.showColumns()">Какие столбцы поддерживаются?</button>
           </div>
 
-          <div id="import-result" style="grid-column:1 / -1; font-size:14px; color:var(--tg-theme-hint-color);"></div>
+          <div id="import-result" class="import-result" style="grid-column:1 / -1;"></div>
         </div>
       </div>
     </div>
@@ -69,7 +69,11 @@
       cursor:pointer;
     }
     .util-head .title{ font-weight:700; }
-    .util-head .chev{ display:inline-block; transition: transform 240ms ease, color 240ms ease; }
+    /* ▶︎ увеличили стрелку до размера текста (чуть крупнее для читаемости) */
+    .util-head .chev{
+      display:inline-block; font-size:1.2em; line-height:1; min-width:1.2em; text-align:right;
+      transition: transform 240ms ease, color 240ms ease;
+    }
     .util-head[aria-expanded="true"] .chev{ transform: rotate(180deg); }
     .util-head:hover{ border-color: var(--app-accent); color: var(--app-accent); }
 
@@ -81,6 +85,8 @@
     .cases-form {
       border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
       border-radius: 16px; padding: 12px; display: grid; gap: 12px; margin-top:8px;
+      /* безопасные переносы, чтобы текст не «вылазил» */
+      overflow-wrap: anywhere;
     }
     .cases-form .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
@@ -102,6 +108,12 @@
       color: var(--tg-theme-hint-color);
     }
     .dropzone.drag { border-color: var(--app-accent); color: var(--app-accent); }
+
+    /* Блок результата импорта — переносы строк и безопасный скролл */
+    .import-result{
+      font-size:14px; color:var(--tg-theme-hint-color);
+      overflow-wrap:anywhere;
+    }
 
     /* Подстраховка: чтобы нижний бар не перекрывал интерфейс */
     .list-spacer { height: 16px; }
@@ -187,10 +199,23 @@
       });
       return {added,updated,affected};
     }
-    function showResult(html){
-      const box=document.getElementById('import-result'); if (box) box.innerHTML=html;
+
+    // Пересчёт высоты открытых аккордеонов (когда контент меняется)
+    function fixOpenHeights(){
+      document.querySelectorAll('.util-body.collapse.open').forEach(body=>{
+        body.style.maxHeight = body.scrollHeight + 'px';
+      });
+      // и общий спейсер страницы
       window.adjustBottomSpacer && window.adjustBottomSpacer();
     }
+
+    function showResult(html){
+      const box=document.getElementById('import-result');
+      if (box) box.innerHTML=html;
+      // после вставки текста — пересчитать высоту аккордеона
+      fixOpenHeights();
+    }
+
     function setupDropzone(){
       const dz=document.getElementById('import-dropzone'); const input=document.getElementById('cases-file'); if(!dz||!input) return;
       ['dragenter','dragover'].forEach(evt=>dz.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');}));
@@ -211,7 +236,8 @@
 
         body.style.overflow='hidden';
         if (shouldOpen){
-          body.classList.add('open'); body.style.maxHeight = body.scrollHeight + 'px';
+          body.classList.add('open'); 
+          body.style.maxHeight = body.scrollHeight + 'px';
           head.setAttribute('aria-expanded','true'); body.setAttribute('aria-hidden','false');
         } else {
           body.style.maxHeight = body.scrollHeight + 'px';
@@ -219,8 +245,8 @@
           head.setAttribute('aria-expanded','false'); body.setAttribute('aria-hidden','true');
           body.addEventListener('transitionend', ()=>{ body.classList.remove('open'); }, {once:true});
         }
-        // подправим спейсер после анимации
-        setTimeout(()=>{ window.adjustBottomSpacer && window.adjustBottomSpacer(); }, 300);
+        // подправим высоты после анимации
+        setTimeout(fixOpenHeights, 300);
       },
 
       exportXLSX(){
@@ -271,20 +297,20 @@
               </details>
             `;
             showResult(msg);
-            // если открыт список дел — обновим его
             window.CASES && window.CASES.render && window.CASES.render();
           } catch(err){ console.error(err); alert('Ошибка импорта: '+(err?.message||err)); }
         };
         if(isCSV) reader.readAsBinaryString(file); else reader.readAsArrayBuffer(file);
-      }
+      },
+
+      // доступно снаружи при необходимости
+      fixOpenHeights
     };
 
     // Инициализация
     document.addEventListener('DOMContentLoaded', ()=>{
       setupDropzone();
-      // по умолчанию секции свёрнуты; при желании можно открыть, передав true:
-      // PROFILE.toggle('export', true);
-      // PROFILE.toggle('import', true);
+      window.addEventListener('resize', fixOpenHeights);
       window.adjustBottomSpacer && window.adjustBottomSpacer();
     });
   })();
