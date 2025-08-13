@@ -71,6 +71,7 @@
 
   <!-- Список задач -->
   <div id="tasks-list" class="cases-list" role="list"></div>
+  <div class="list-spacer" id="tasks-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
   <div id="tasks-empty" class="cases-empty" hidden>
@@ -504,6 +505,7 @@
           `;
         }).join('');
       }
+      window.adjustBottomSpacer && window.adjustBottomSpacer();
     };
 
     // Автоинициализация

@@ -71,6 +71,7 @@
 
   <!-- Список заседаний -->
   <div id="hearings-list" class="cases-list" role="list"></div>
+  <div class="list-spacer" id="hearings-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
   <div id="hearings-empty" class="cases-empty" hidden>
@@ -496,6 +497,7 @@
           `;
         }).join('');
       }
+      window.adjustBottomSpacer && window.adjustBottomSpacer();
     };
 
     // Автоинициализация
