@@ -59,7 +59,7 @@
   <!-- Спейсер, чтобы ничего не пряталось под нижним баром -->
   <div class="list-spacer" id="profile-spacer" aria-hidden="true"></div>
 
-  <!-- Стили — единый дизайн + аккордеоны -->
+  <!-- Стили -->
   <style>
     /* Аккордеон: шапка секции */
     .util-head{
@@ -69,7 +69,6 @@
       cursor:pointer;
     }
     .util-head .title{ font-weight:700; }
-    /* ▶︎ увеличили стрелку до размера текста (чуть крупнее для читаемости) */
     .util-head .chev{
       display:inline-block; font-size:1.2em; line-height:1; min-width:1.2em; text-align:right;
       transition: transform 240ms ease, color 240ms ease;
@@ -81,11 +80,10 @@
     .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 260ms ease, opacity 260ms ease; }
     .collapse.open { opacity: 1; }
 
-    /* Блоки форм — в стиле других вкладок */
+    /* Блоки форм — общий стиль */
     .cases-form {
       border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
       border-radius: 16px; padding: 12px; display: grid; gap: 12px; margin-top:8px;
-      /* безопасные переносы, чтобы текст не «вылазил» */
       overflow-wrap: anywhere;
     }
     .cases-form .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -109,11 +107,10 @@
     }
     .dropzone.drag { border-color: var(--app-accent); color: var(--app-accent); }
 
-    /* Блок результата импорта — переносы строк и безопасный скролл */
-    .import-result{
-      font-size:14px; color:var(--tg-theme-hint-color);
-      overflow-wrap:anywhere;
-    }
+    /* Результат импорта + <details> */
+    .import-result{ font-size:14px; color:var(--tg-theme-hint-color); overflow-wrap:anywhere; }
+    .import-result details { margin-top: 6px; }
+    .import-result summary { cursor: pointer; }
 
     /* Подстраховка: чтобы нижний бар не перекрывал интерфейс */
     .list-spacer { height: 16px; }
@@ -123,13 +120,34 @@
     }
   </style>
 
-  <!-- Библиотека Excel (SheetJS) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- ВНИМАНИЕ: XLSX грузим лениво в JS ниже (без статического <script src=...>) -->
 
-  <!-- Логика (инертный скрипт) -->
+  <!-- Логика -->
   <script type="text/plain" id="profile-inline-js">
   (function () {
     const CASES_KEY = 'tl_cases_v1';
+
+    /* ===== Ленивый загрузчик XLSX с двумя CDN и таймаутом ===== */
+    const XLSX_URLS = [
+      'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+      'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+    ];
+    function ensureXLSX(timeoutMs = 8000){
+      return new Promise((resolve, reject) => {
+        if (window.XLSX) return resolve(window.XLSX);
+        let i = 0, timer = null;
+        const tryNext = () => {
+          if (i >= XLSX_URLS.length) return reject(new Error('Не удалось загрузить библиотеку XLSX (CDN недоступны).'));
+          const s = document.createElement('script');
+          s.src = XLSX_URLS[i++]; s.async = true; s.crossOrigin = 'anonymous';
+          s.onload = () => { clearTimeout(timer); window.XLSX ? resolve(window.XLSX) : reject(new Error('XLSX не инициализировалась')); };
+          s.onerror = () => { clearTimeout(timer); s.remove(); tryNext(); };
+          document.head.appendChild(s);
+          timer = setTimeout(() => { s.remove(); tryNext(); }, timeoutMs);
+        };
+        tryNext();
+      });
+    }
 
     function nowStr() {
       const d = new Date(); const pad = n => (n<10 ? '0'+n : ''+n);
@@ -152,19 +170,19 @@
     };
     const CANON_HEADERS = ['Номер дела','Должник','ИНН','Суд','Примечание','Статус'];
 
-    function headerToKey(h){
-      if (!h) return null; const s=String(h).trim().toLowerCase();
-      for (const k of Object.keys(COLS)) if (COLS[k].some(a=>a===s)) return k;
-      return null;
-    }
+    function headerToKey(h){ if (!h) return null; const s=String(h).trim().toLowerCase();
+      for (const k of Object.keys(COLS)) if (COLS[k].some(a=>a===s)) return k; return null; }
+
     function buildAOA(cases){
       const header = CANON_HEADERS.slice();
       const rows = cases.map(c => [c.number||'', c.debtor||'', c.inn||'', c.court||'', c.note||'', c.status||'active']);
       return [header, ...rows];
     }
+
     function writeWorkbook(aoa,name){
       const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Дела'); XLSX.writeFile(wb,name);
     }
+
     function parseSheetToObjects(sheet){
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
       if (!rows.length) return [];
@@ -179,6 +197,7 @@
       }
       return out;
     }
+
     function mergeCases(existing, imported){
       const index = new Map(); existing.forEach(c=>{ if(c&&c.number) index.set(String(c.number).trim(), c); });
       let added=0, updated=0; const affected=[];
@@ -200,20 +219,38 @@
       return {added,updated,affected};
     }
 
-    // Пересчёт высоты открытых аккордеонов (когда контент меняется)
+    /* === Пересчёт высоты открытых аккордеонов (в т.ч. при toggle <details>) === */
     function fixOpenHeights(){
       document.querySelectorAll('.util-body.collapse.open').forEach(body=>{
         body.style.maxHeight = body.scrollHeight + 'px';
       });
-      // и общий спейсер страницы
       window.adjustBottomSpacer && window.adjustBottomSpacer();
+    }
+    // подписываем <details> внутри контейнера на пересчёт
+    function wireDetailsAutoResize(container){
+      if (!container) return;
+      container.querySelectorAll('details').forEach(d => {
+        if (!d._wiredToggle) {
+          d.addEventListener('toggle', fixOpenHeights);
+          d._wiredToggle = true;
+        }
+      });
+    }
+    // безопасный ререндер вкладки «Дела», только если её DOM на странице
+    function safeRenderCases(){
+      const hasDom = document.getElementById('cases-list') && document.getElementById('cases-empty');
+      if (hasDom && window.CASES && typeof window.CASES.render === 'function') {
+        try { window.CASES.render(); } catch(_) { /* игнорируем */ }
+      }
     }
 
     function showResult(html){
       const box=document.getElementById('import-result');
-      if (box) box.innerHTML=html;
-      // после вставки текста — пересчитать высоту аккордеона
-      fixOpenHeights();
+      if (box) {
+        box.innerHTML=html;
+        wireDetailsAutoResize(box);   // <details> будет корректно менять высоту секции
+      }
+      fixOpenHeights();               // сразу подстроим аккордеон
     }
 
     function setupDropzone(){
@@ -226,6 +263,27 @@
       });
     }
 
+    // Резервный парсер CSV (без XLSX) — на случай, если сеть недоступна
+    function parseCSVText(text){
+      const firstLine = (text.split(/\r?\n/)[0] || '');
+      const delimiter = (firstLine.match(/;/g)||[]).length >= (firstLine.match(/,/g)||[]).length
+                        ? (firstLine.includes(';') ? ';' : (firstLine.includes('\t') ? '\t' : ','))
+                        : ',';
+      const lines = text.replace(/\r/g,'').split('\n').filter(l => l.trim().length);
+      if (!lines.length) return [];
+      const headers = lines[0].split(delimiter).map(h => headerToKey(h));
+      const out = [];
+      for (let i=1;i<lines.length;i++){
+        const cols = lines[i].split(delimiter);
+        const obj = {};
+        headers.forEach((key, idx) => { if (!key) return; obj[key] = (cols[idx]||'').trim(); });
+        const num = (obj.number||'').trim(); if (!num) continue;
+        if (!obj.status) obj.status = 'active';
+        out.push(obj);
+      }
+      return out;
+    }
+
     window.PROFILE = {
       toggle(which, force){
         const id = which==='export' ? 'util-export' : 'util-import';
@@ -236,8 +294,7 @@
 
         body.style.overflow='hidden';
         if (shouldOpen){
-          body.classList.add('open'); 
-          body.style.maxHeight = body.scrollHeight + 'px';
+          body.classList.add('open'); body.style.maxHeight = body.scrollHeight + 'px';
           head.setAttribute('aria-expanded','true'); body.setAttribute('aria-hidden','false');
         } else {
           body.style.maxHeight = body.scrollHeight + 'px';
@@ -245,43 +302,80 @@
           head.setAttribute('aria-expanded','false'); body.setAttribute('aria-hidden','true');
           body.addEventListener('transitionend', ()=>{ body.classList.remove('open'); }, {once:true});
         }
-        // подправим высоты после анимации
         setTimeout(fixOpenHeights, 300);
       },
 
-      exportXLSX(){
-        const data=readCases(); const aoa=buildAOA(data); const name='cases_'+nowStr()+'.xlsx';
-        try{ writeWorkbook(aoa,name); }catch(e){ alert('Не удалось сформировать Excel: '+(e?.message||e)); }
+      async exportXLSX(){
+        try{
+          await ensureXLSX();
+          const data=readCases(); const aoa=buildAOA(data); const name='cases_'+nowStr()+'.xlsx';
+          writeWorkbook(aoa,name);
+        }catch(e){
+          alert('Не удалось загрузить библиотеку XLSX для экспорта.\n'+(e?.message||e));
+        }
       },
-      downloadTemplate(){
-        const aoa=[CANON_HEADERS]; const name='cases_template.xlsx';
-        try{ writeWorkbook(aoa,name); }catch(e){ alert('Не удалось сформировать шаблон: '+(e?.message||e)); }
+
+      async downloadTemplate(){
+        try{
+          await ensureXLSX();
+          const aoa=[CANON_HEADERS]; const name='cases_template.xlsx';
+          writeWorkbook(aoa,name);
+        }catch(e){
+          alert('Не удалось загрузить библиотеку XLSX для шаблона.\n'+(e?.message||e));
+        }
       },
+
       exportJSON(){
-        const data=readCases(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
-        const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cases_backup_'+nowStr()+'.json';
+        const data=readCases();
+        const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='cases_backup_'+nowStr()+'.json';
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       },
+
       showColumns(){
         const cols = ['Номер дела','Должник','ИНН','Суд','Примечание','Статус'].map(c=>'• '+c).join('<br>');
         showResult('<div><strong>Поддерживаемые столбцы:</strong><br>'+cols+'<br><br><em>Мин. обязательный — «Номер дела».</em></div>');
       },
-      importFile(){
+
+      async importFile(){
         const input=document.getElementById('cases-file'); const file=input&&input.files&&input.files[0];
         if(!file){ alert('Выбери файл .xlsx или .csv'); return; }
-        const reader=new FileReader(); const isCSV=/\.csv$/i.test(file.name);
-        reader.onload=(e)=>{
+
+        const isCSV=/\.csv$/i.test(file.name);
+        let xlsxReady = false;
+        try { await ensureXLSX(); xlsxReady = true; } catch(_) { xlsxReady = false; }
+
+        const reader=new FileReader();
+        reader.onload=async (e)=>{
           try{
-            const existing=readCases(); let rowsObjs=[];
-            if(isCSV){
-              const data=e.target.result; const wb=XLSX.read(data,{type:'binary'}); const ws=wb.Sheets[wb.SheetNames[0]];
-              rowsObjs = parseSheetToObjects(ws);
+            const existing=readCases();
+            let rowsObjs=[];
+
+            if (xlsxReady) {
+              if (isCSV) {
+                const data = e.target.result;
+                const wb = XLSX.read(typeof data === 'string' ? data : new Uint8Array(data), { type: typeof data === 'string' ? 'binary' : 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                rowsObjs = (window.parseSheetToObjects || parseSheetToObjects)(ws);
+              } else {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, { type: 'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                rowsObjs = (window.parseSheetToObjects || parseSheetToObjects)(ws);
+              }
             } else {
-              const data=new Uint8Array(e.target.result); const wb=XLSX.read(data,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
-              rowsObjs = parseSheetToObjects(ws);
+              if (!isCSV) {
+                alert('Для импорта .xlsx требуется сеть (загрузка библиотеки XLSX не удалась). Сохрани файл как CSV и повтори.');
+                return;
+              }
+              const text = typeof e.target.result === 'string' ? e.target.result : new TextDecoder('utf-8').decode(e.target.result);
+              rowsObjs = parseCSVText(text);
             }
+
             if(!rowsObjs.length){ showResult('Не найдено валидных строк. Убедись, что есть заголовки и заполнен «Номер дела».'); return; }
             const {added,updated,affected}=mergeCases(existing,rowsObjs); saveCases(existing);
+
             const msg = `
               <div>
                 <strong>Импорт завершён</strong><br>
@@ -289,7 +383,7 @@
                 Обновлено: <strong>${updated}</strong><br>
                 Всего в базе: <strong>${existing.length}</strong>
               </div>
-              <details style="margin-top:6px;">
+              <details>
                 <summary>Показать список затронутых дел</summary>
                 <div style="margin-top:6px; max-height:160px; overflow:auto;">
                   ${affected.map(x => `<div>${x.type === 'add' ? '➕' : '✏️'} ${x.number}</div>`).join('')}
@@ -297,20 +391,31 @@
               </details>
             `;
             showResult(msg);
-            window.CASES && window.CASES.render && window.CASES.render();
-          } catch(err){ console.error(err); alert('Ошибка импорта: '+(err?.message||err)); }
+
+            // безопасно обновим вкладку «Дела», если она смонтирована
+            safeRenderCases();
+          } catch(err){
+            console.error(err);
+            alert('Ошибка импорта: '+(err?.message||err));
+          }
         };
-        if(isCSV) reader.readAsBinaryString(file); else reader.readAsArrayBuffer(file);
+
+        if (xlsxReady) {
+          if (isCSV) reader.readAsBinaryString(file);
+          else reader.readAsArrayBuffer(file);
+        } else {
+          reader.readAsText(file, 'utf-8');
+        }
       },
 
-      // доступно снаружи при необходимости
+      // экспортируем для отладочного вызова
       fixOpenHeights
     };
 
     // Инициализация
     document.addEventListener('DOMContentLoaded', ()=>{
       setupDropzone();
-      window.addEventListener('resize', fixOpenHeights);
+      window.addEventListener('resize', PROFILE.fixOpenHeights);
       window.adjustBottomSpacer && window.adjustBottomSpacer();
     });
   })();
