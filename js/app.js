@@ -133,3 +133,29 @@ document.addEventListener('DOMContentLoaded', () => {
   disableZoom();
   // ... твой текущий код инициализации
 });
+// === Отступ внизу размером "одной плитки" ===
+window.adjustBottomSpacer = function adjustBottomSpacer() {
+  const lists = ['#cases-list', '#hearings-list', '#tasks-list'];
+
+  lists.forEach(sel => {
+    const list = document.querySelector(sel);
+    if (!list) return;
+
+    // найдём/создадим спейсер сразу после списка
+    let spacer = list.nextElementSibling;
+    if (!spacer || !spacer.classList || !spacer.classList.contains('list-spacer')) {
+      spacer = document.createElement('div');
+      spacer.className = 'list-spacer';
+      list.insertAdjacentElement('afterend', spacer);
+    }
+
+    // высота одной карточки + небольшой зазор
+    const card = list.querySelector('.case-card');
+    const tileH = card ? card.offsetHeight : 160; // дефолт, если карточек нет
+    spacer.style.height = (tileH + 16) + 'px';
+  });
+};
+
+// пересчитываем на старте и при изменениях размеров/ориентации
+window.addEventListener('resize', () => window.adjustBottomSpacer && window.adjustBottomSpacer());
+document.addEventListener('DOMContentLoaded', () => window.adjustBottomSpacer && window.adjustBottomSpacer());

@@ -104,3 +104,26 @@ html, body {
 
 /* Дополнительно: убираем вспышку подсветки при тапе на iOS/Android */
 * { -webkit-tap-highlight-color: transparent; }
+/* ==== Нижний бар: +1/3 к текущей высоте ==== */
+:root{
+  /* укажите здесь базовую высоту, которая была до этого (если не знаете — 60px обычно подходит) */
+  --tabbar-base: 60px;
+  --tabbar-height: calc(var(--tabbar-base) * 1.3333);
+}
+
+/* сам бар */
+#app-tabbar{
+  height: var(--tabbar-height);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* чтобы контент не уезжал под бар — даём нижний внутренний отступ страницам */
+.page{
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
+}
+
+/* универсальный «спейсер» после списков (будем задавать высоту из JS) */
+.list-spacer{
+  height: 0;
+  pointer-events: none;
+}
