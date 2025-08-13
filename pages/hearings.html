@@ -20,8 +20,9 @@
     <button role="tab" class="chip" data-filter="archived" onclick="HEARINGS && HEARINGS.setFilter('archived')">Архив</button>
   </div>
 
-  <!-- КАЛЕНДАРЬ ТЕКУЩЕГО МЕСЯЦА -->
+  <!-- КАЛЕНДАРЬ -->
   <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (текущий месяц)"></div>
+
   <!-- Плашка выбранной даты -->
   <div id="hearings-day-chip" class="day-chip" hidden>
     <span id="hearings-day-label"></span>
@@ -35,7 +36,6 @@
         <label class="has-suggest">
           <span>Номер дела *</span>
           <input type="text" id="h-case" required placeholder="А40-12345/2025" autocomplete="off" />
-          <!-- Подсказки по делам из cases -->
           <div id="h-case-suggest" class="suggest" role="listbox" hidden></div>
         </label>
         <label>
@@ -79,7 +79,6 @@
 
   <!-- Список заседаний -->
   <div id="hearings-list" class="cases-list" role="list"></div>
-  <!-- СПЕЙСЕР, чтобы последняя карточка не пряталась за нижней навигацией -->
   <div class="list-spacer" id="hearings-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
@@ -90,7 +89,7 @@
     <button class="primary" onclick="HEARINGS && HEARINGS.toggleForm(true)">Добавить заседание</button>
   </div>
 
-  <!-- Стили: добавлен календарь -->
+  <!-- Стили -->
   <style>
     .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
     .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
@@ -106,8 +105,17 @@
 
     /* Календарь */
     .cal { border: 1px solid var(--separator); border-radius: 16px; background: var(--tg-theme-secondary-bg-color); padding: 10px; display: grid; gap: 8px; }
-    .cal-head { display: flex; align-items: center; justify-content: space-between; }
+    .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
     .cal-title { font-weight: 700; }
+    .cal-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .cal-nav .navbtn,
+    .cal-nav .ghost.small {
+      padding: 6px 10px; border-radius: 10px; border: 1px solid var(--separator); background: transparent; cursor: pointer;
+      color: var(--tg-theme-text-color);
+    }
+    .cal-nav .navbtn:hover,
+    .cal-nav .ghost.small:hover { border-color: var(--app-accent); color: var(--app-accent); }
+
     .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; color: var(--tg-theme-hint-color); font-size: 12px; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
     .cal-day {
@@ -128,7 +136,7 @@
     .day-chip { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; color: var(--tg-theme-hint-color); }
     .day-chip .small { padding: 6px 10px; border-radius: 10px; }
 
-    /* Сворачиваемая область */
+    /* Сворачиваемая область и прочее — как раньше */
     .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 240ms ease, opacity 240ms ease; }
     .collapse.open { opacity: 1; }
 
@@ -157,15 +165,11 @@
     }
     .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     .case-number { font-weight: 700; }
-    .badge {
-      font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator);
-      color: var(--tg-theme-hint-color);
-    }
+    .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator); color: var(--tg-theme-hint-color); }
     .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
     .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
     .case-actions { display: flex; gap: 8px; margin-top: 6px; }
 
-    /* Подсказки по номеру дела */
     .has-suggest { position: relative; }
     .suggest {
       position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
@@ -173,9 +177,7 @@
       border-radius: 12px; margin-top: 6px; max-height: 220px; overflow: auto;
       box-shadow: 0 6px 24px rgba(0,0,0,0.25);
     }
-    .suggest-item {
-      padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px;
-    }
+    .suggest-item { padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
     .suggest-item:hover, .suggest-item[aria-selected="true"] { background: var(--tg-theme-secondary-bg-color); }
     .suggest-item .hint { color: var(--tg-theme-hint-color); font-size: 12px; }
 
@@ -205,6 +207,9 @@
     function fmtDate(dateStr) {
       if (!dateStr) return '—';
       try { return new Date(dateStr).toLocaleDateString('ru-RU'); } catch (_) { return '—'; }
+    }
+    function fmtMonthTitle(date) {
+      return date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
     }
     function fmtDayLabel(yyyy_mm_dd) {
       try {
@@ -244,20 +249,38 @@
       const first = new Date(y, m, 1);
       const last  = new Date(y, m + 1, 0);
       const daysInMonth = last.getDate();
-      // делаем понедельник первым днём недели
-      const dow = (first.getDay() + 6) % 7; // 0=понедельник .. 6=воскресенье
+      const dow = (first.getDay() + 6) % 7; // 0=пн..6=вс
       return { y, m, daysInMonth, startOffset: dow };
     }
     function pad2(n){ return n < 10 ? '0'+n : ''+n; }
     function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
+    function shiftMonth(y, m, delta) {
+      const d = new Date(y, m, 1);
+      d.setMonth(d.getMonth() + delta);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
 
     function buildCalendarHTML(state, counts) {
       const ref = new Date(state.calendar.year, state.calendar.month, 1);
       const { y, m, daysInMonth, startOffset } = monthInfo(ref);
-      const monthName = ref.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-
+      const monthName = fmtMonthTitle(ref);
       const weekNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
       const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+      // заголовок + навигация
+      let head = `
+        <div class="cal-head">
+          <div class="cal-title">${monthName[0].toUpperCase()+monthName.slice(1)}</div>
+          <div class="cal-nav">
+            <button type="button" class="navbtn" data-cal-prev aria-label="Предыдущий месяц">‹</button>
+            <button type="button" class="navbtn" data-cal-next aria-label="Следующий месяц">›</button>
+            <button type="button" class="ghost small" data-cal-today>Сегодня</button>
+            <button type="button" class="ghost small" data-cal-jump="+1">+1м</button>
+            <button type="button" class="ghost small" data-cal-jump="+3">+3м</button>
+            <button type="button" class="ghost small" data-cal-jump="+6">+6м</button>
+          </div>
+        </div>
+      `;
 
       let cells = '';
       for (let i=0; i<totalCells; i++) {
@@ -271,6 +294,7 @@
         let cls = 'cal-day';
         if (isSameDay(dateStr)) cls += ' today';
         if (state.selectedDay === dateStr) cls += ' selected';
+
         // уровни подсветки
         if (cnt >= 10) cls += ' has-10';
         else if (cnt >= 6) cls += ' has-6';
@@ -285,10 +309,7 @@
         `;
       }
 
-      return `
-        <div class="cal-head">
-          <div class="cal-title">${monthName[0].toUpperCase()+monthName.slice(1)}</div>
-        </div>
+      return head + `
         <div class="cal-week">${weekNames.map(w => `<div style="text-align:center;">${w}</div>`).join('')}</div>
         <div class="cal-grid">${cells}</div>
       `;
@@ -298,7 +319,12 @@
     window.HEARINGS = {
       LS_KEY: 'tl_hearings_v1',
       data: [],
-      state: { query: '', filter: 'all', selectedDay: null, calendar: { year: (new Date()).getFullYear(), month: (new Date()).getMonth() } },
+      state: {
+        query: '',
+        filter: 'all',
+        selectedDay: null,
+        calendar: { year: (new Date()).getFullYear(), month: (new Date()).getMonth() }
+      },
       editingId: null,
       casesIndex: [],
 
@@ -321,7 +347,7 @@
 
         this.autoArchiveStale();
         this.initCaseSuggest();
-        this.render(); // внутри render построим и календарь
+        this.render(); // в том числе календарь
       },
 
       save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
@@ -334,6 +360,22 @@
           ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
         });
         this.render();
+      },
+
+      // Календарь: смена месяца
+      gotoMonth(year, month) {
+        this.state.calendar.year = year;
+        this.state.calendar.month = month; // 0..11
+        this.render();
+      },
+      jumpMonths(delta) {
+        const { year, month } = this.state.calendar;
+        const next = shiftMonth(year, month, delta);
+        this.gotoMonth(next.year, next.month);
+      },
+      gotoTodayMonth() {
+        const d = new Date();
+        this.gotoMonth(d.getFullYear(), d.getMonth());
       },
 
       // Сброс выбранной в календаре даты
@@ -350,7 +392,6 @@
         const btn  = document.getElementById('hearings-add-btn');
         const isOpen = wrap.classList.contains('open');
         const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
-
         if (shouldOpen === isOpen) return;
 
         wrap.style.overflow = 'hidden';
@@ -544,11 +585,26 @@
         const counts = this.buildCountsForCalendar();
         cal.innerHTML = buildCalendarHTML(this.state, counts);
 
-        // клики по дням
+        // Навигация месяцами
+        const prev = cal.querySelector('[data-cal-prev]');
+        const next = cal.querySelector('[data-cal-next]');
+        const today= cal.querySelector('[data-cal-today]');
+        prev && prev.addEventListener('click', () => this.jumpMonths(-1));
+        next && next.addEventListener('click', () => this.jumpMonths(+1));
+        today && today.addEventListener('click', () => this.gotoTodayMonth());
+
+        cal.querySelectorAll('[data-cal-jump]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const val = btn.getAttribute('data-cal-jump') || '+1';
+            const n = parseInt(val.replace('+',''), 10);
+            if (!isNaN(n)) this.jumpMonths(n);
+          });
+        });
+
+        // Клики по дням
         cal.querySelectorAll('.cal-day[data-date]').forEach(btn => {
           btn.addEventListener('click', () => {
             const date = btn.getAttribute('data-date');
-            // если даты нет в текущем месяце/или 0 заседаний — всё равно покажем (для «пустых» дней — отфильтруется в списке)
             this.state.selectedDay = date;
             const chip = document.getElementById('hearings-day-chip');
             const label = document.getElementById('hearings-day-label');
