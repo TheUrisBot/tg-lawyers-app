@@ -1,73 +1,102 @@
 <section class="page profile" id="profile-page" aria-labelledby="profile-title">
   <h1 id="profile-title">Профиль / Утилиты</h1>
 
-  <!-- Экспорт -->
-  <div class="cases-form" role="region" aria-label="Экспорт дел">
-    <div class="grid">
-      <div style="grid-column:1 / -1;">
-        <strong>Экспорт дел</strong>
-        <div style="color:var(--tg-theme-hint-color); font-size:14px; margin-top:4px;">
-          Выгружаем все дела из локального хранилища в Excel. Шаблон — совместимый с импортом.
+  <!-- === УТИЛИТА: ЭКСПОРТ (аккордеон) === -->
+  <div class="util-section" id="util-export">
+    <button class="util-head" type="button" onclick="PROFILE && PROFILE.toggle('export')" aria-expanded="false">
+      <span class="title">Экспорт дел</span>
+      <span class="chev" aria-hidden="true">ˬ</span>
+    </button>
+    <div class="util-body collapse" aria-hidden="true">
+      <div class="cases-form" role="region" aria-label="Экспорт дел">
+        <div class="grid">
+          <div style="grid-column:1 / -1; color:var(--tg-theme-hint-color); font-size:14px;">
+            Выгружаем все дела из локального хранилища в Excel. Шаблон — совместимый с импортом.
+          </div>
+          <div class="form-actions" style="justify-content:flex-start; gap:8px;">
+            <button class="primary" onclick="PROFILE && PROFILE.exportXLSX()">Экспорт в Excel (.xlsx)</button>
+            <button class="ghost"   onclick="PROFILE && PROFILE.downloadTemplate()">Скачать шаблон Excel</button>
+            <button class="ghost"   onclick="PROFILE && PROFILE.exportJSON()">Бэкап (JSON)</button>
+          </div>
         </div>
-      </div>
-
-      <div class="form-actions" style="justify-content:flex-start; gap:8px;">
-        <button class="primary" onclick="PROFILE && PROFILE.exportXLSX()">Экспорт в Excel (.xlsx)</button>
-        <button class="ghost" onclick="PROFILE && PROFILE.downloadTemplate()">Скачать шаблон Excel</button>
-        <button class="ghost" onclick="PROFILE && PROFILE.exportJSON()">Бэкап (JSON)</button>
       </div>
     </div>
   </div>
 
-  <!-- Импорт -->
-  <div class="cases-form" role="region" aria-label="Импорт дел" style="margin-top:10px;">
-    <div class="grid">
-      <div style="grid-column:1 / -1;">
-        <strong>Импорт дел</strong>
-        <div style="color:var(--tg-theme-hint-color); font-size:14px; margin-top:4px;">
-          Поддерживаем файлы Excel (.xlsx) и CSV. При совпадении «Номер дела» запись <em>обновляется</em>, иначе — <em>создаётся</em>.
+  <!-- === УТИЛИТА: ИМПОРТ (аккордеон) === -->
+  <div class="util-section" id="util-import" style="margin-top:10px;">
+    <button class="util-head" type="button" onclick="PROFILE && PROFILE.toggle('import')" aria-expanded="false">
+      <span class="title">Импорт дел</span>
+      <span class="chev" aria-hidden="true">ˬ</span>
+    </button>
+    <div class="util-body collapse" aria-hidden="true">
+      <div class="cases-form" role="region" aria-label="Импорт дел">
+        <div class="grid">
+          <div style="grid-column:1 / -1; color:var(--tg-theme-hint-color); font-size:14px;">
+            Поддерживаем Excel (.xlsx) и CSV. При совпадении «Номер дела» запись <em>обновляется</em>, иначе — <em>создаётся</em>.
+          </div>
+
+          <label style="grid-column:1 / -1;">
+            <span>Файл Excel/CSV</span>
+            <input id="cases-file" type="file" accept=".xlsx,.csv" />
+          </label>
+
+          <div class="dropzone" id="import-dropzone" style="grid-column:1 / -1;">
+            Перетащи файл сюда или выбери его выше
+          </div>
+
+          <div class="form-actions" style="justify-content:flex-start;">
+            <button class="primary" onclick="PROFILE && PROFILE.importFile()">Импортировать</button>
+            <button class="ghost"   onclick="PROFILE && PROFILE.showColumns()">Какие столбцы поддерживаются?</button>
+          </div>
+
+          <div id="import-result" style="grid-column:1 / -1; font-size:14px; color:var(--tg-theme-hint-color);"></div>
         </div>
       </div>
-
-      <label style="grid-column:1 / -1;">
-        <span>Файл Excel/CSV</span>
-        <input id="cases-file" type="file" accept=".xlsx,.csv" />
-      </label>
-
-      <div class="dropzone" id="import-dropzone" style="grid-column:1 / -1;">
-        Перетащи файл сюда или выбери его выше
-      </div>
-
-      <div class="form-actions" style="justify-content:flex-start;">
-        <button class="primary" onclick="PROFILE && PROFILE.importFile()">Импортировать</button>
-        <button class="ghost" onclick="PROFILE && PROFILE.showColumns()">Какие столбцы поддерживаются?</button>
-      </div>
-
-      <div id="import-result" style="grid-column:1 / -1; font-size:14px; color:var(--tg-theme-hint-color);"></div>
     </div>
   </div>
 
   <!-- Спейсер, чтобы ничего не пряталось под нижним баром -->
   <div class="list-spacer" id="profile-spacer" aria-hidden="true"></div>
 
-  <!-- Стили — те же базовые токены, что на других вкладках -->
+  <!-- Стили — единый дизайн + аккордеоны -->
   <style>
+    /* Аккордеон: шапка секции */
+    .util-head{
+      width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px; border-radius:14px; border:1px solid var(--separator);
+      background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);
+      cursor:pointer;
+    }
+    .util-head .title{ font-weight:700; }
+    .util-head .chev{ display:inline-block; transition: transform 240ms ease, color 240ms ease; }
+    .util-head[aria-expanded="true"] .chev{ transform: rotate(180deg); }
+    .util-head:hover{ border-color: var(--app-accent); color: var(--app-accent); }
+
+    /* Тело секции — плавное сворачивание */
+    .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 260ms ease, opacity 260ms ease; }
+    .collapse.open { opacity: 1; }
+
+    /* Блоки форм — в стиле других вкладок */
     .cases-form {
       border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 12px;
+      border-radius: 16px; padding: 12px; display: grid; gap: 12px; margin-top:8px;
     }
     .cases-form .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
-    .cases-form input { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); outline: none; }
+    .cases-form input {
+      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
+      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); outline: none;
+    }
     .cases-form input:focus { border-color: var(--app-accent); }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
     .primary, .ghost {
       appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
       background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);
     }
     .ghost { background: transparent; border-color: var(--separator); color: var(--tg-theme-text-color); }
 
+    /* Dropzone */
     .dropzone {
       border: 1px dashed var(--separator); border-radius: 12px; padding: 18px; text-align: center;
       color: var(--tg-theme-hint-color);
@@ -76,6 +105,10 @@
 
     /* Подстраховка: чтобы нижний бар не перекрывал интерфейс */
     .list-spacer { height: 16px; }
+
+    @media (max-width: 520px) {
+      .cases-form .grid { grid-template-columns: 1fr; }
+    }
   </style>
 
   <!-- Библиотека Excel (SheetJS) -->
@@ -87,232 +120,142 @@
     const CASES_KEY = 'tl_cases_v1';
 
     function nowStr() {
-      const d = new Date();
-      const pad = n => (n<10 ? '0'+n : ''+n);
+      const d = new Date(); const pad = n => (n<10 ? '0'+n : ''+n);
       return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
     }
-
     function readCases() {
-      try {
-        const raw = localStorage.getItem(CASES_KEY);
-        const arr = raw ? JSON.parse(raw) : [];
-        return Array.isArray(arr) ? arr : [];
-      } catch(_) { return []; }
+      try { const raw = localStorage.getItem(CASES_KEY); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
+      catch(_) { return []; }
     }
-    function saveCases(arr) {
-      localStorage.setItem(CASES_KEY, JSON.stringify(arr || []));
-    }
-    function uid() {
-      return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7);
-    }
+    function saveCases(arr) { localStorage.setItem(CASES_KEY, JSON.stringify(arr || [])); }
+    function uid(){ return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7); }
 
-    // Унифицированные названия столбцов и синонимы (регистр не важен)
     const COLS = {
-      number:     ['номер дела', 'номер', 'дело', 'case', 'case number', '№ дела'],
-      debtor:     ['должник', 'debtor'],
-      inn:        ['инн', 'inn'],
-      court:      ['суд', 'court'],
-      note:       ['примечание', 'заметка', 'note', 'comment'],
-      status:     ['статус', 'status'] // active|archived (по умолчанию active)
+      number: ['номер дела','номер','дело','case','case number','№ дела'],
+      debtor: ['должник','debtor'],
+      inn:    ['инн','inn'],
+      court:  ['суд','court'],
+      note:   ['примечание','заметка','note','comment'],
+      status: ['статус','status']
     };
     const CANON_HEADERS = ['Номер дела','Должник','ИНН','Суд','Примечание','Статус'];
 
-    function headerToKey(h) {
-      if (!h) return null;
-      const s = String(h).trim().toLowerCase();
-      for (const key of Object.keys(COLS)) {
-        if (COLS[key].some(a => a === s)) return key;
-      }
+    function headerToKey(h){
+      if (!h) return null; const s=String(h).trim().toLowerCase();
+      for (const k of Object.keys(COLS)) if (COLS[k].some(a=>a===s)) return k;
       return null;
     }
-
-    function buildAOA(cases) {
+    function buildAOA(cases){
       const header = CANON_HEADERS.slice();
-      const rows = cases.map(c => [
-        c.number || '',
-        c.debtor || '',
-        c.inn || '',
-        c.court || '',
-        c.note || '',
-        c.status || 'active'
-      ]);
+      const rows = cases.map(c => [c.number||'', c.debtor||'', c.inn||'', c.court||'', c.note||'', c.status||'active']);
       return [header, ...rows];
     }
-
-    function writeWorkbook(aoa, name) {
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Дела');
-      XLSX.writeFile(wb, name);
+    function writeWorkbook(aoa,name){
+      const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Дела'); XLSX.writeFile(wb,name);
     }
-
-    function parseSheetToObjects(sheet) {
-      // читаем в виде массивов, чтобы корректно обрабатывать пустые ячейки
+    function parseSheetToObjects(sheet){
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
       if (!rows.length) return [];
-
-      // Первая строка — заголовки
       const headers = rows[0].map(h => headerToKey(h));
-      // Ищем индекс ключевого столбца number
-      const idxNumber = headers.findIndex(h => h === 'number');
-
       const out = [];
-      for (let r = 1; r < rows.length; r++) {
-        const row = rows[r];
-        const obj = {};
-        headers.forEach((key, i) => {
-          if (!key) return;
-          const val = row[i];
-          obj[key] = (val === null || typeof val === 'undefined') ? '' : String(val).trim();
-        });
-        const num = (obj.number || '').trim();
-        if (!num) continue; // пропускаем строки без номера дела — считаем мусором/пробелами
-        if (!obj.status) obj.status = 'active';
+      for (let r=1;r<rows.length;r++){
+        const row = rows[r]; const obj = {};
+        headers.forEach((key,i)=>{ if(!key) return; const val=row[i]; obj[key]=(val==null? '': String(val).trim()); });
+        const num = (obj.number||'').trim(); if (!num) continue;
+        if (!obj.status) obj.status='active';
         out.push(obj);
       }
       return out;
     }
-
-    function mergeCases(existing, imported) {
-      const index = new Map();
-      existing.forEach(c => { if (c && c.number) index.set(String(c.number).trim(), c); });
-
-      let added = 0, updated = 0;
-      const affected = [];
-
-      imported.forEach(nc => {
-        const key = String(nc.number).trim();
-        const prev = index.get(key);
-        if (prev) {
-          // обновляем только известные поля
-          prev.debtor = nc.debtor ?? prev.debtor;
-          prev.inn    = nc.inn    ?? prev.inn;
-          prev.court  = nc.court  ?? prev.court;
-          prev.note   = nc.note   ?? prev.note;
-          prev.status = nc.status || prev.status || 'active';
-          prev.updatedAt = Date.now();
-          updated += 1;
-          affected.push({ type: 'upd', number: key });
+    function mergeCases(existing, imported){
+      const index = new Map(); existing.forEach(c=>{ if(c&&c.number) index.set(String(c.number).trim(), c); });
+      let added=0, updated=0; const affected=[];
+      imported.forEach(nc=>{
+        const key=String(nc.number).trim(); const prev=index.get(key);
+        if (prev){
+          prev.debtor=nc.debtor ?? prev.debtor;
+          prev.inn   =nc.inn    ?? prev.inn;
+          prev.court =nc.court  ?? prev.court;
+          prev.note  =nc.note   ?? prev.note;
+          prev.status=nc.status || prev.status || 'active';
+          prev.updatedAt=Date.now(); updated++; affected.push({type:'upd', number:key});
         } else {
-          const nu = {
-            id: uid(),
-            number: key,
-            debtor: nc.debtor || '',
-            inn: nc.inn || '',
-            court: nc.court || '',
-            note: nc.note || '',
-            status: (nc.status === 'archived' ? 'archived' : 'active'),
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          };
-          existing.push(nu);
-          index.set(key, nu);
-          added += 1;
-          affected.push({ type: 'add', number: key });
+          const nu={ id:uid(), number:key, debtor:nc.debtor||'', inn:nc.inn||'', court:nc.court||'', note:nc.note||'',
+                     status:(nc.status==='archived'?'archived':'active'), createdAt:Date.now(), updatedAt:Date.now() };
+          existing.push(nu); index.set(key,nu); added++; affected.push({type:'add', number:key});
         }
       });
-
-      return { added, updated, affected };
+      return {added,updated,affected};
     }
-
-    function showResult(html) {
-      const box = document.getElementById('import-result');
-      if (box) box.innerHTML = html;
-      // подправим нижний спейсер, если есть глобальная функция
+    function showResult(html){
+      const box=document.getElementById('import-result'); if (box) box.innerHTML=html;
       window.adjustBottomSpacer && window.adjustBottomSpacer();
     }
-
-    // Drag&Drop для зоны
-    function setupDropzone() {
-      const dz = document.getElementById('import-dropzone');
-      const input = document.getElementById('cases-file');
-      if (!dz || !input) return;
-
-      ['dragenter','dragover'].forEach(evt => {
-        dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.add('drag'); });
-      });
-      ;['dragleave','drop'].forEach(evt => {
-        dz.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('drag'); });
-      });
-      dz.addEventListener('drop', e => {
-        const files = e.dataTransfer?.files;
-        if (files && files.length) {
-          input.files = files; // положим в input
-          showResult('Файл выбран: <strong>' + files[0].name + '</strong>. Нажми «Импортировать».');
-        }
+    function setupDropzone(){
+      const dz=document.getElementById('import-dropzone'); const input=document.getElementById('cases-file'); if(!dz||!input) return;
+      ['dragenter','dragover'].forEach(evt=>dz.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag');}));
+      ['dragleave','drop'].forEach(evt=>dz.addEventListener(evt,e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('drag');}));
+      dz.addEventListener('drop',e=>{
+        const files=e.dataTransfer?.files; if(files&&files.length){ input.files=files;
+          showResult('Файл выбран: <strong>'+files[0].name+'</strong>. Нажми «Импортировать».'); }
       });
     }
 
     window.PROFILE = {
-      exportXLSX() {
-        const data = readCases();
-        const aoa = buildAOA(data);
-        const name = 'cases_' + nowStr() + '.xlsx';
-        try {
-          writeWorkbook(aoa, name);
-        } catch (e) {
-          alert('Не удалось сформировать Excel: ' + (e && e.message ? e.message : e));
+      toggle(which, force){
+        const id = which==='export' ? 'util-export' : 'util-import';
+        const sec = document.getElementById(id); if(!sec) return;
+        const head = sec.querySelector('.util-head'); const body = sec.querySelector('.util-body');
+        const isOpen = body.classList.contains('open'); const shouldOpen = (typeof force==='boolean') ? force : !isOpen;
+        if (shouldOpen===isOpen) return;
+
+        body.style.overflow='hidden';
+        if (shouldOpen){
+          body.classList.add('open'); body.style.maxHeight = body.scrollHeight + 'px';
+          head.setAttribute('aria-expanded','true'); body.setAttribute('aria-hidden','false');
+        } else {
+          body.style.maxHeight = body.scrollHeight + 'px';
+          requestAnimationFrame(()=>{ body.style.maxHeight='0px'; });
+          head.setAttribute('aria-expanded','false'); body.setAttribute('aria-hidden','true');
+          body.addEventListener('transitionend', ()=>{ body.classList.remove('open'); }, {once:true});
         }
+        // подправим спейсер после анимации
+        setTimeout(()=>{ window.adjustBottomSpacer && window.adjustBottomSpacer(); }, 300);
       },
 
-      downloadTemplate() {
-        const aoa = [ CANON_HEADERS ];
-        const name = 'cases_template.xlsx';
-        try {
-          writeWorkbook(aoa, name);
-        } catch (e) {
-          alert('Не удалось сформировать шаблон: ' + (e && e.message ? e.message : e));
-        }
+      exportXLSX(){
+        const data=readCases(); const aoa=buildAOA(data); const name='cases_'+nowStr()+'.xlsx';
+        try{ writeWorkbook(aoa,name); }catch(e){ alert('Не удалось сформировать Excel: '+(e?.message||e)); }
       },
-
-      exportJSON() {
-        const data = readCases();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'cases_backup_' + nowStr() + '.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
+      downloadTemplate(){
+        const aoa=[CANON_HEADERS]; const name='cases_template.xlsx';
+        try{ writeWorkbook(aoa,name); }catch(e){ alert('Не удалось сформировать шаблон: '+(e?.message||e)); }
       },
-
-      showColumns() {
-        const cols = CANON_HEADERS.map(c => '• ' + c).join('<br>');
-        showResult('<div><strong>Поддерживаемые столбцы:</strong><br>'+cols+'<br><br><em>Другие названия будут проигнорированы. Минимум — «Номер дела».</em></div>');
+      exportJSON(){
+        const data=readCases(); const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
+        const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='cases_backup_'+nowStr()+'.json';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       },
-
-      importFile() {
-        const input = document.getElementById('cases-file');
-        const file = input && input.files && input.files[0];
-        if (!file) { alert('Выбери файл .xlsx или .csv'); return; }
-
-        const reader = new FileReader();
-
-        // .csv обрабатываем отдельно, иначе — читаем через XLSX
-        const isCSV = /\.csv$/i.test(file.name);
-
-        reader.onload = (e) => {
-          try {
-            const existing = readCases();
-
-            let rowsObjs = [];
-            if (isCSV) {
-              // CSV → workbook через SheetJS — так корректнее с кодировками/разделителями
-              const data = e.target.result;
-              const wb = XLSX.read(data, { type: 'binary' });
-              const ws = wb.Sheets[wb.SheetNames[0]];
+      showColumns(){
+        const cols = ['Номер дела','Должник','ИНН','Суд','Примечание','Статус'].map(c=>'• '+c).join('<br>');
+        showResult('<div><strong>Поддерживаемые столбцы:</strong><br>'+cols+'<br><br><em>Мин. обязательный — «Номер дела».</em></div>');
+      },
+      importFile(){
+        const input=document.getElementById('cases-file'); const file=input&&input.files&&input.files[0];
+        if(!file){ alert('Выбери файл .xlsx или .csv'); return; }
+        const reader=new FileReader(); const isCSV=/\.csv$/i.test(file.name);
+        reader.onload=(e)=>{
+          try{
+            const existing=readCases(); let rowsObjs=[];
+            if(isCSV){
+              const data=e.target.result; const wb=XLSX.read(data,{type:'binary'}); const ws=wb.Sheets[wb.SheetNames[0]];
               rowsObjs = parseSheetToObjects(ws);
             } else {
-              const data = new Uint8Array(e.target.result);
-              const wb = XLSX.read(data, { type: 'array' });
-              const ws = wb.Sheets[wb.SheetNames[0]];
+              const data=new Uint8Array(e.target.result); const wb=XLSX.read(data,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
               rowsObjs = parseSheetToObjects(ws);
             }
-
-            if (!rowsObjs.length) { showResult('Не найдено валидных строк. Убедись, что в первой строке заголовки, а столбец «Номер дела» заполнен.'); return; }
-
-            const { added, updated, affected } = mergeCases(existing, rowsObjs);
-            saveCases(existing);
-
+            if(!rowsObjs.length){ showResult('Не найдено валидных строк. Убедись, что есть заголовки и заполнен «Номер дела».'); return; }
+            const {added,updated,affected}=mergeCases(existing,rowsObjs); saveCases(existing);
             const msg = `
               <div>
                 <strong>Импорт завершён</strong><br>
@@ -328,27 +271,20 @@
               </details>
             `;
             showResult(msg);
-
-            // если открыта вкладка «Дела», можно вручную перерисовать её список (если глобальный объект существует)
+            // если открыт список дел — обновим его
             window.CASES && window.CASES.render && window.CASES.render();
-
-          } catch (err) {
-            console.error(err);
-            alert('Ошибка импорта: ' + (err && err.message ? err.message : err));
-          }
+          } catch(err){ console.error(err); alert('Ошибка импорта: '+(err?.message||err)); }
         };
-
-        if (isCSV) {
-          reader.readAsBinaryString(file);
-        } else {
-          reader.readAsArrayBuffer(file);
-        }
+        if(isCSV) reader.readAsBinaryString(file); else reader.readAsArrayBuffer(file);
       }
     };
 
     // Инициализация
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', ()=>{
       setupDropzone();
+      // по умолчанию секции свёрнуты; при желании можно открыть, передав true:
+      // PROFILE.toggle('export', true);
+      // PROFILE.toggle('import', true);
       window.adjustBottomSpacer && window.adjustBottomSpacer();
     });
   })();
