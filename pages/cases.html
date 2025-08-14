@@ -156,22 +156,19 @@
       state: { query: '', filter: 'all' },
       editingId: null,
 
-      init() {
-        try {
-          const raw = localStorage.getItem(this.LS_KEY);
-          this.data = raw ? JSON.parse(raw) : [];
-        } catch(e) { this.data = []; }
+init() {
+  try {
+    const raw = localStorage.getItem(this.LS_KEY);
+    this.data = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(this.data)) this.data = [];
+  } catch (e) {
+    this.data = [];
+  }
 
-        if (!this.data.length) {
-          this.data = [
-            { id: String(Date.now()-2), number: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', inn: '7712345678', court: 'АС г. Москвы', note: 'Первичное обращение', status: 'active', createdAt: Date.now()-20000 },
-            { id: String(Date.now()-1), number: 'А56-9876/2024', debtor: 'Иванов И.И.',          inn: '781234567890', court: 'АС СПб',        note: '',                    status: 'active', createdAt: Date.now()-10000 },
-            { id: String(Date.now()),   number: 'А40-22222/2023', debtor: 'ООО «Ромашка»',      inn: '7722334455',   court: 'АС г. Москвы', note: 'В архиве',            status: 'archived', createdAt: Date.now() }
-          ];
-          this.save();
-        }
-        this.render();
-      },
+  // Никаких демо-данных
+  this.render();
+},
+
 
       save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
       setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },

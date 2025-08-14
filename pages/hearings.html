@@ -328,27 +328,21 @@
       editingId: null,
       casesIndex: [],
 
-      init() {
-        this.casesIndex = loadCasesIndex();
+init() {
+  try {
+    const raw = localStorage.getItem(this.LS_KEY);
+    this.data = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(this.data)) this.data = [];
+  } catch (e) {
+    this.data = [];
+  }
 
-        try {
-          const raw = localStorage.getItem(this.LS_KEY);
-          this.data = raw ? JSON.parse(raw) : [];
-        } catch(e) { this.data = []; }
+  // Никаких демо-данных
+  this.autoArchiveStale && this.autoArchiveStale();
+  this.initCaseSuggest && this.initCaseSuggest();
+  this.render();
+},
 
-        if (!this.data.length) {
-          this.data = [
-            { id: String(Date.now()-3), caseNumber: 'А40-12345/2025', debtor: 'ООО «СеверТорг»', date: '2025-09-05', time: '10:00', court: 'АС г. Москвы', place: 'Зал 2', note: 'Первое заседание', status: 'active', createdAt: Date.now()-30000, updatedAt: Date.now()-30000 },
-            { id: String(Date.now()-2), caseNumber: 'А56-9876/2024',  debtor: 'Иванов И.И.',      date: '2025-08-20', time: '14:30', court: 'АС СПб',       place: 'Зал 5', note: '',                 status: 'active', createdAt: Date.now()-20000, updatedAt: Date.now()-20000 },
-            { id: String(Date.now()-1), caseNumber: 'А40-22222/2023', debtor: 'ООО «Ромашка»',    date: '2024-12-10', time: '11:00', court: 'АС г. Москвы', place: '',     note: 'В архиве',         status: 'archived', createdAt: Date.now()-10000, updatedAt: Date.now()-10000 }
-          ];
-          this.save();
-        }
-
-        this.autoArchiveStale();
-        this.initCaseSuggest();
-        this.render(); // в том числе календарь
-      },
 
       save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
       setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },
