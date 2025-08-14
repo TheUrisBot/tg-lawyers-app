@@ -4,7 +4,7 @@
   <!-- Панель инструментов -->
   <div class="cases-toolbar" role="region" aria-label="Поиск и действия">
     <div class="cases-search">
-      <input id="cases-search-input" type="search" placeholder="Номер дела, ИНН или должник"
+      <input id="cases-search-input" type="search" placeholder="Номер дела, должник, суд, примечание"
              aria-label="Поиск по делам" oninput="CASES && CASES.setQuery(this.value)" />
       <button class="ghost" aria-label="Очистить поиск"
               onclick="CASES && CASES.setQuery(''); const i=document.getElementById('cases-search-input'); i.value=''; i.focus();">✕</button>
@@ -13,42 +13,39 @@
   </div>
 
   <!-- Фильтры -->
-  <div class="cases-filters" role="tablist" aria-label="Фильтр по статусу">
+  <div class="cases-filters" role="tablist" aria-label="Фильтр по типу">
     <button role="tab" class="chip active" data-filter="all" onclick="CASES && CASES.setFilter('all')">Все</button>
     <button role="tab" class="chip" data-filter="active" onclick="CASES && CASES.setFilter('active')">Активные</button>
     <button role="tab" class="chip" data-filter="archived" onclick="CASES && CASES.setFilter('archived')">Архив</button>
   </div>
 
-  <!-- Сворачиваемый блок формы -->
+  <!-- Форма (сворачиваемая) -->
   <div id="cases-form-wrap" class="collapse" aria-hidden="true">
     <form id="cases-form" class="cases-form" onsubmit="CASES && CASES.submit(event)">
       <div class="grid">
         <label>
           <span>Номер дела *</span>
-          <input type="text" id="cases-number" required placeholder="А40-12345/2025" />
+          <input type="text" id="c-number" required placeholder="А40-12345/2025" />
         </label>
         <label>
-          <span>Должник *</span>
-          <input type="text" id="cases-debtor" required placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
+          <span>Должник</span>
+          <input type="text" id="c-debtor" placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
         </label>
         <label>
           <span>ИНН</span>
-          <!-- ВАЖНО: правильный pattern без двойных слэшей -->
-          <input type="text" id="cases-inn" inputmode="numeric"
-                 pattern="[0-9]{10}|[0-9]{12}" title="ИНН: 10 или 12 цифр"
-                 placeholder="10 или 12 цифр" />
+          <input type="text" id="c-inn" inputmode="numeric" pattern="[0-9]{10,12}" placeholder="10 или 12 цифр (необязательно)" />
         </label>
         <label>
           <span>Суд</span>
-          <input type="text" id="cases-court" placeholder="АС г. Москвы" />
+          <input type="text" id="c-court" placeholder="АС г. Москвы" />
         </label>
         <label style="grid-column: 1 / -1;">
           <span>Примечание</span>
-          <textarea id="cases-note" rows="2" placeholder="Произвольные комментарии по делу"></textarea>
+          <textarea id="c-note" rows="2" placeholder="Любые заметки по делу"></textarea>
         </label>
         <label>
           <span>Статус</span>
-          <select id="cases-status">
+          <select id="c-status">
             <option value="active" selected>Активное</option>
             <option value="archived">Архив</option>
           </select>
@@ -61,296 +58,222 @@
     </form>
   </div>
 
-  <!-- Список дел -->
+  <!-- Список -->
   <div id="cases-list" class="cases-list" role="list"></div>
-  <div class="list-spacer" id="cases-spacer" aria-hidden="true"></div>
+  <div class="list-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
   <div id="cases-empty" class="cases-empty" hidden>
     <div class="emoji" aria-hidden="true">📁</div>
     <div class="title">Пока нет дел</div>
-    <div class="hint">Добавь первое дело по номеру или ИНН — и начнём работать.</div>
+    <div class="hint">Добавь первое дело — номер, должник (по желанию), суд…</div>
     <button class="primary" onclick="CASES && CASES.toggleForm(true)">Добавить дело</button>
   </div>
 
-  <!-- Стили ТОЛЬКО для этой вкладки -->
   <style>
-    #cases-page { gap: 14px; }
-    .cases-toolbar {
-      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
-    }
-    .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-    .cases-search input {
-      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);
-      outline: none;
-    }
-    .cases-search input:focus { border-color: var(--app-accent); }
-    .cases-filters { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip {
-      border: 1px solid var(--separator); background: transparent; color: var(--tg-theme-text-color);
-      padding: 6px 10px; border-radius: 999px; cursor: pointer;
-    }
-    .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
+    .cases-toolbar { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+    .cases-search { display:grid; grid-template-columns:1fr auto; gap:6px; }
+    .cases-search input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color); outline:none; }
+    .cases-search input:focus{ border-color:var(--app-accent); }
+    .cases-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .chip{ border:1px solid var(--separator); background:transparent; color:var(--tg-theme-text-color);
+      padding:6px 10px; border-radius:999px; cursor:pointer; }
+    .chip.active{ border-color:var(--app-accent); color:var(--app-accent); font-weight:600; }
 
-    /* Сворачиваемая область */
-    .collapse { max-height: 0; overflow: hidden; opacity: 0;
-      transition: max-height 240ms ease, opacity 240ms ease; }
-    .collapse.open { opacity: 1; }
+    .collapse{ max-height:0; overflow:hidden; opacity:0; transition:max-height 240ms ease, opacity 240ms ease; }
+    .collapse.open{ opacity:1; }
 
-    .cases-form {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 12px;
+    .cases-form{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:12px; margin-top:8px; }
+    .cases-form .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .cases-form label{ display:grid; gap:6px; font-size:12px; color:var(--tg-theme-hint-color); }
+    .cases-form input,.cases-form select,.cases-form textarea{
+      padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); outline:none; resize:vertical;
     }
-    .cases-form .grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    }
-    .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
-    .cases-form input, .cases-form select, .cases-form textarea {
-      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color);
-      outline: none; resize: vertical;
-    }
-    .cases-form input:focus, .cases-form select:focus, .cases-form textarea:focus { border-color: var(--app-accent); }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .primary, .ghost {
-      appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
-      background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);
-    }
-    .ghost { background: transparent; border-color: var(--separator); color: var(--tg-theme-text-color); }
-    .cases-list { display: grid; gap: 8px; }
-    .case-card {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 6px;
-    }
-    .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-    .case-number { font-weight: 700; }
-    .badge {
-      font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator);
-      color: var(--tg-theme-hint-color);
-    }
-    .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
-    .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
-    .case-actions { display: flex; gap: 8px; margin-top: 6px; }
-    .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
-    .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
-    .cases-empty .title { font-weight: 700; margin-bottom: 4px; }
-    .cases-empty .hint { color: var(--tg-theme-hint-color); margin-bottom: 10px; }
+    .cases-form input:focus,.cases-form select:focus,.cases-form textarea:focus{ border-color:var(--app-accent); }
+    .form-actions{ display:flex; gap:8px; justify-content:flex-end; }
 
-    @media (max-width: 520px) {
-      .cases-form .grid { grid-template-columns: 1fr; }
-    }
+    .primary,.ghost{ appearance:none; border:1px solid transparent; padding:10px 12px; border-radius:12px; cursor:pointer;
+      background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); }
+    .ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
+
+    .cases-list{ display:grid; gap:8px; margin-top:8px; }
+    .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:6px; }
+    .case-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .case-number{ font-weight:700; }
+    .badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--separator); color:var(--tg-theme-hint-color); }
+    .badge.active{ color:var(--app-accent); border-color:var(--app-accent); }
+    .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
+    .case-actions{ display:flex; gap:8px; margin-top:6px; }
+
+    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
+    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
+    .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
+    .list-spacer{ height:16px; }
+
+    @media (max-width:520px){ .cases-form .grid{ grid-template-columns:1fr; } }
   </style>
 
-  <!-- Код логики хранится тут (инертный) -->
   <script type="text/plain" id="cases-inline-js">
-  (function () {
-    function setExpanded(btn, wrap, open) {
-      btn?.setAttribute('aria-expanded', String(open));
-      wrap?.setAttribute('aria-hidden', String(!open));
-    }
+  (function(){
+    function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
 
     window.CASES = {
       LS_KEY: 'tl_cases_v1',
       data: [],
-      state: { query: '', filter: 'all' },
+      state: { query:'', filter:'all' },
       editingId: null,
 
-init() {
-  try {
-    const raw = localStorage.getItem(this.LS_KEY);
-    this.data = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(this.data)) this.data = [];
-  } catch (e) {
-    this.data = [];
-  }
+      init(){
+        try {
+          const raw = localStorage.getItem(this.LS_KEY);
+          this.data = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(this.data)) this.data = [];
+        } catch(e){ this.data = []; }
+        this.render();
+      },
 
-  // Никаких демо-данных
-  this.render();
-},
+      save(){ localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
 
-
-      save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
-      setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },
-
-      setFilter(f) {
-        this.state.filter = f;
-        document.querySelectorAll('#cases-page .chip').forEach(ch => {
-          ch.classList.toggle('active', ch.dataset.filter === f);
-          ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
+      setQuery(v){ this.state.query=(v||'').toLowerCase(); this.render(); },
+      setFilter(f){
+        this.state.filter=f;
+        document.querySelectorAll('#cases-page .chip').forEach(ch=>{
+          ch.classList.toggle('active', ch.dataset.filter===f);
+          ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
         });
         this.render();
       },
 
-      // Плавное сворачивание/разворачивание
-      toggleForm(force) {
-        const wrap = document.getElementById('cases-form-wrap');
-        const btn  = document.getElementById('cases-add-btn');
-        const isOpen = wrap.classList.contains('open');
-        const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
+      toggleForm(force){
+        const wrap=document.getElementById('cases-form-wrap');
+        const btn=document.getElementById('cases-add-btn');
+        const isOpen=wrap.classList.contains('open');
+        const shouldOpen = (typeof force==='boolean') ? force : !isOpen;
+        if (shouldOpen===isOpen) return;
 
-        if (shouldOpen === isOpen) return;
-
-        wrap.style.overflow = 'hidden';
-        if (shouldOpen) {
+        wrap.style.overflow='hidden';
+        if (shouldOpen){
           wrap.classList.add('open');
           wrap.style.maxHeight = wrap.scrollHeight + 'px';
           setExpanded(btn, wrap, true);
-          document.getElementById('cases-number').focus();
+          document.getElementById('c-number').focus();
         } else {
           wrap.style.maxHeight = wrap.scrollHeight + 'px';
-          requestAnimationFrame(() => { wrap.style.maxHeight = '0px'; });
+          requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
           setExpanded(btn, wrap, false);
-          wrap.addEventListener('transitionend', () => {
-            wrap.classList.remove('open');
-            // при сворачивании — сбрасываем режим редактирования
-            CASES.cancelEdit();
-          }, { once: true });
+          wrap.addEventListener('transitionend', ()=>wrap.classList.remove('open'), {once:true});
+          this.cancelEdit();
         }
       },
 
-      // Редактирование
-      edit(id) {
-        const item = this.data.find(x => x.id === id);
-        if (!item) return;
-        this.editingId = id;
-
-        document.getElementById('cases-number').value = item.number || '';
-        document.getElementById('cases-debtor').value = item.debtor || '';
-        document.getElementById('cases-inn').value    = item.inn || '';
-        document.getElementById('cases-court').value  = item.court || '';
-        document.getElementById('cases-note').value   = item.note || '';
-        document.getElementById('cases-status').value = item.status || 'active';
-        document.getElementById('cases-submit-btn').textContent = 'Обновить';
-
-        // открыть форму
-        const wrap = document.getElementById('cases-form-wrap');
-        if (!wrap.classList.contains('open')) this.toggleForm(true);
-        else document.getElementById('cases-number').focus();
+      edit(id){
+        const item=this.data.find(x=>x.id===id); if(!item) return;
+        this.editingId=id;
+        document.getElementById('c-number').value=item.number||'';
+        document.getElementById('c-debtor').value=item.debtor||'';
+        document.getElementById('c-inn').value=item.inn||'';
+        document.getElementById('c-court').value=item.court||'';
+        document.getElementById('c-note').value=item.note||'';
+        document.getElementById('c-status').value=item.status||'active';
+        document.getElementById('cases-submit-btn').textContent='Обновить';
+        const wrap=document.getElementById('cases-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
       },
 
-      cancelEdit() {
-        this.editingId = null;
-        document.getElementById('cases-submit-btn').textContent = 'Сохранить';
-        this.clearForm();
+      cancelEdit(){
+        this.editingId=null;
+        document.getElementById('cases-submit-btn').textContent='Сохранить';
+        ['c-number','c-debtor','c-inn','c-court','c-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('c-status').value='active';
       },
 
-      submit(ev) {
-        ev && ev.preventDefault();
-        const number = document.getElementById('cases-number').value.trim();
-        const debtor = document.getElementById('cases-debtor').value.trim();
-        const inn    = document.getElementById('cases-inn').value.trim();
-        const court  = document.getElementById('cases-court').value.trim();
-        const note   = document.getElementById('cases-note').value.trim();
-        const status = document.getElementById('cases-status').value;
+      submit(ev){
+        ev.preventDefault();
+        const number=document.getElementById('c-number').value.trim();
+        const debtor=document.getElementById('c-debtor').value.trim();
+        const inn=document.getElementById('c-inn').value.trim();
+        const court=document.getElementById('c-court').value.trim();
+        const note=document.getElementById('c-note').value.trim();
+        const status=document.getElementById('c-status').value;
+        if(!number){ alert('Укажи номер дела.'); return; }
+        if(inn && !/^\d{10,12}$/.test(inn)){ alert('ИНН должен содержать 10 или 12 цифр. Или оставь пустым.'); return; }
 
-        if (!number || !debtor) { alert('Заполни обязательные поля: Номер дела и Должник.'); return; }
-        // ВАЖНО: правильные регэкспы без двойных слэшей
-        if (inn && !(/^\d{10}$/.test(inn) || /^\d{12}$/.test(inn))) {
-          alert('ИНН должен содержать 10 или 12 цифр.');
-          return;
-        }
-
-        if (this.editingId) {
-          // обновление существующей записи
-          const idx = this.data.findIndex(x => x.id === this.editingId);
-          if (idx !== -1) {
-            const prev = this.data[idx];
-            this.data[idx] = {
-              ...prev,
-              number, debtor, inn, court, note,
-              status: status === 'archived' ? 'archived' : 'active'
-            };
-          }
+        if(this.editingId){
+          const i=this.data.findIndex(x=>x.id===this.editingId);
+          if(i!==-1) this.data[i]={...this.data[i], number, debtor, inn, court, note, status, updatedAt:Date.now()};
         } else {
-          // добавление новой
-          this.data.push({
-            id: String(Date.now()),
-            number, debtor, inn, court, note,
-            status: status === 'archived' ? 'archived' : 'active',
-            createdAt: Date.now()
-          });
+          this.data.push({ id:String(Date.now()), number, debtor, inn, court, note, status: status==='archived'?'archived':'active', createdAt:Date.now(), updatedAt:Date.now() });
         }
-
         this.save();
         this.cancelEdit();
         this.toggleForm(false);
         this.render();
       },
 
-      clearForm() {
-        ['cases-number','cases-debtor','cases-inn','cases-court','cases-note'].forEach(id => {
-          const el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('cases-status').value = 'active';
+      toggleArchive(id){
+        const item=this.data.find(x=>x.id===id); if(!item) return;
+        item.status = item.status==='active' ? 'archived' : 'active';
+        item.updatedAt=Date.now(); this.save(); this.render();
+      },
+      remove(id){
+        if(!confirm('Удалить дело?')) return;
+        this.data=this.data.filter(x=>x.id!==id); this.save(); this.render();
       },
 
-      toggleArchive(id) {
-        const item = this.data.find(x => x.id === id); if (!item) return;
-        item.status = item.status === 'active' ? 'archived' : 'active';
-        this.save(); this.render();
-      },
+      render(){
+        const list=document.getElementById('cases-list');
+        const empty=document.getElementById('cases-empty');
+        let items=this.data.slice();
+        const q=this.state.query;
 
-      remove(id) {
-        if (!confirm('Удалить дело? Действие необратимо.')) return;
-        this.data = this.data.filter(x => x.id !== id);
-        this.save(); this.render();
-      },
-
-      render() {
-        const list = document.getElementById('cases-list');
-        const empty = document.getElementById('cases-empty');
-
-        let items = this.data.slice();
-        const q = this.state.query;
-        if (q) {
-          items = items.filter(i =>
-            i.number.toLowerCase().includes(q) ||
-            (i.debtor || '').toLowerCase().includes(q) ||
-            (i.inn || '').includes(q) ||
-            (i.note || '').toLowerCase().includes(q)
+        if(q){
+          items=items.filter(i=>
+            (i.number||'').toLowerCase().includes(q) ||
+            (i.debtor||'').toLowerCase().includes(q) ||
+            (i.court||'').toLowerCase().includes(q) ||
+            (i.note||'').toLowerCase().includes(q) ||
+            (i.inn||'').includes(q)
           );
         }
-        if (this.state.filter !== 'all') items = items.filter(i => i.status === this.state.filter);
+        if(this.state.filter==='active') items=items.filter(i=>i.status!=='archived');
+        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
 
-        // сортировка по дате создания (новые выше)
-        items.sort((a,b) => b.createdAt - a.createdAt);
+        items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (b.updatedAt||0)-(a.updatedAt||0));
 
-        if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
-        empty.hidden = true;
+        if(!items.length){ list.innerHTML=''; empty.hidden=false; window.adjustBottomSpacer && window.adjustBottomSpacer(); return; }
+        empty.hidden=true;
 
-        list.innerHTML = items.map(i => `
+        list.innerHTML=items.map(i=>`
           <article class="case-card" role="listitem" data-id="${i.id}">
             <div class="case-head">
               <div class="case-number">${i.number}</div>
-              <div class="badge ${i.status === 'active' ? 'active' : ''}">
-                ${i.status === 'active' ? 'Активное' : 'Архив'}
-              </div>
+              <div class="badge ${i.status==='active'?'active':''}">${i.status==='active'?'Активное':'Архив'}</div>
             </div>
             <div class="case-row">
-              <span><strong>Должник:</strong> ${i.debtor || '—'}</span>
-              <span><strong>ИНН:</strong> ${i.inn || '—'}</span>
-              <span><strong>Суд:</strong> ${i.court || '—'}</span>
+              ${i.debtor?`<span><strong>Должник:</strong> ${i.debtor}</span>`:''}
+              ${i.inn?`<span><strong>ИНН:</strong> ${i.inn}</span>`:''}
+              ${i.court?`<span><strong>Суд:</strong> ${i.court}</span>`:''}
             </div>
-            ${i.note ? `<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>` : ''}
+            ${i.note?`<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>`:''}
             <div class="case-actions">
-              <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">
-                ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
-              </button>
+              <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">${i.status==='active'?'Архивировать':'Вернуть в активные'}</button>
               <button class="ghost" onclick="CASES && CASES.edit('${i.id}')">Редактировать</button>
               <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
             </div>
           </article>
         `).join('');
+
+        window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
 
-    // Автоинициализация
     window.CASES.init();
   })();
   </script>
 
-  <!-- Триггер выполняет код выше -->
   <img alt="" aria-hidden="true" style="display:none"
        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
        onload='(function(){var s=document.getElementById("cases-inline-js"); if(s){ new Function(s.textContent)(); }})();' />

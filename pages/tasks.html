@@ -1,67 +1,60 @@
 <section class="page tasks" id="tasks-page" aria-labelledby="tasks-title">
   <h1 id="tasks-title">Задачи</h1>
 
-  <!-- Панель инструментов -->
+  <!-- Панель -->
   <div class="cases-toolbar" role="region" aria-label="Поиск и действия">
     <div class="cases-search">
       <input id="tasks-search-input" type="search" placeholder="Название, номер дела, примечание"
              aria-label="Поиск по задачам" oninput="TASKS && TASKS.setQuery(this.value)" />
-      <button class="ghost" aria-label="Очистить поиск"
+      <button class="ghost" aria-label="Очистить"
               onclick="TASKS && TASKS.setQuery(''); const i=document.getElementById('tasks-search-input'); i.value=''; i.focus();">✕</button>
     </div>
     <button class="primary" id="tasks-add-btn" aria-expanded="false" onclick="TASKS && TASKS.toggleForm()">Добавить</button>
   </div>
 
   <!-- Фильтры -->
-  <div class="cases-filters" role="tablist" aria-label="Фильтр по сроку">
+  <div class="cases-filters" role="tablist" aria-label="Фильтр по типу">
     <button role="tab" class="chip active" data-filter="all" onclick="TASKS && TASKS.setFilter('all')">Все</button>
     <button role="tab" class="chip" data-filter="upcoming" onclick="TASKS && TASKS.setFilter('upcoming')">Предстоящие</button>
-    <button role="tab" class="chip" data-filter="past" onclick="TASKS && TASKS.setFilter('past')">Просроченные</button>
+    <button role="tab" class="chip" data-filter="overdue" onclick="TASKS && TASKS.setFilter('overdue')">Просроченные</button>
     <button role="tab" class="chip" data-filter="archived" onclick="TASKS && TASKS.setFilter('archived')">Архив</button>
   </div>
 
-  <!-- Сворачиваемая форма -->
-  <div id="tasks-form-wrap" class="collapse" aria-hidden="true">
+  <!-- Форма -->
+  <div id="tasks-form-wrap" class="collapse" aria-hidden="true" style="margin-top:10px;">
     <form id="tasks-form" class="cases-form" onsubmit="TASKS && TASKS.submit(event)">
       <div class="grid">
-        <label style="grid-column: 1 / -1;">
-          <span>Название задачи *</span>
-          <input type="text" id="t-title" required placeholder="Подготовить отзыв / Направить ходатайство" />
+        <label>
+          <span>Название *</span>
+          <input type="text" id="t-title" required placeholder="Например: Подготовить отзыв" />
         </label>
-
         <label class="has-suggest">
-          <span>Номер дела *</span>
-          <input type="text" id="t-case" required placeholder="А40-12345/2025" autocomplete="off" />
+          <span>Номер дела</span>
+          <input type="text" id="t-case" placeholder="А40-12345/2025" autocomplete="off" />
           <div id="t-case-suggest" class="suggest" role="listbox" hidden></div>
         </label>
-        <label>
+        <label class="has-suggest">
           <span>Должник</span>
-          <input type="text" id="t-debtor" placeholder="Автозаполнение из дела (необязательно)" />
-        </label>
-
-        <label>
-          <span>Срок (дата) *</span>
-          <input type="date" id="t-date" required />
+          <input type="text" id="t-debtor" placeholder="Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
+          <div id="t-debtor-suggest" class="suggest" role="listbox" hidden></div>
         </label>
         <label>
-          <span>Время</span>
-          <input type="time" id="t-time" />
+          <span>Срок</span>
+          <input type="datetime-local" id="t-due" />
         </label>
-
         <label style="grid-column: 1 / -1;">
           <span>Примечание</span>
-          <textarea id="t-note" rows="2" placeholder="Детали: что именно сделать, материалы, контакты…"></textarea>
+          <textarea id="t-note" rows="2" placeholder="Любые комментарии к задаче"></textarea>
         </label>
-
         <label>
           <span>Статус</span>
           <select id="t-status">
             <option value="active" selected>Активная</option>
+            <option value="done">Выполнено</option>
             <option value="archived">Архив</option>
           </select>
         </label>
       </div>
-
       <div class="form-actions">
         <button type="button" class="ghost" onclick="TASKS && TASKS.toggleForm(false)">Свернуть</button>
         <button type="submit" class="primary" id="tasks-submit-btn">Сохранить</button>
@@ -69,442 +62,275 @@
     </form>
   </div>
 
-  <!-- Список задач -->
+  <!-- Список -->
   <div id="tasks-list" class="cases-list" role="list"></div>
-  <div class="list-spacer" id="tasks-spacer" aria-hidden="true"></div>
+  <div class="list-spacer" aria-hidden="true"></div>
 
-  <!-- Пустое состояние -->
+  <!-- Пустое -->
   <div id="tasks-empty" class="cases-empty" hidden>
-    <div class="emoji" aria-hidden="true">✅</div>
+    <div class="emoji" aria-hidden="true">📝</div>
     <div class="title">Пока нет задач</div>
-    <div class="hint">Создай первую задачу и привяжи её к делу для удобства навигации.</div>
+    <div class="hint">Добавь первую задачу: название обязательно, остальное по желанию.</div>
     <button class="primary" onclick="TASKS && TASKS.toggleForm(true)">Добавить задачу</button>
   </div>
 
-  <!-- Стили (переносы + адаптивные кнопки) -->
   <style>
-    .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
-    .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-    .cases-search input {
-      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); outline: none;
-    }
-    .cases-search input:focus { border-color: var(--app-accent); }
-    .cases-filters { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip { border: 1px solid var(--separator); background: transparent; color: var(--tg-theme-text-color);
-      padding: 6px 10px; border-radius: 999px; cursor: pointer; }
-    .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
+    .cases-toolbar{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+    .cases-search{ display:grid; grid-template-columns:1fr auto; gap:6px; }
+    .cases-search input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color); outline:none; }
+    .cases-search input:focus{ border-color:var(--app-accent); }
+    .cases-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .chip{ border:1px solid var(--separator); background:transparent; color:var(--tg-theme-text-color);
+      padding:6px 10px; border-radius:999px; cursor:pointer; }
+    .chip.active{ border-color:var(--app-accent); color:var(--app-accent); font-weight:600; }
 
-    .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 240ms ease, opacity 240ms ease; }
-    .collapse.open { opacity: 1; }
+    .collapse{ max-height:0; overflow:hidden; opacity:0; transition:max-height 240ms ease, opacity 240ms ease; }
+    .collapse.open{ opacity:1; }
 
-    .cases-form {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 12px;
+    .cases-form{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:12px; margin-top:8px; }
+    .cases-form .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .cases-form label{ display:grid; gap:6px; font-size:12px; color:var(--tg-theme-hint-color); }
+    .cases-form input,.cases-form select,.cases-form textarea{
+      padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); outline:none; resize:vertical;
     }
-    .cases-form .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
-    .cases-form input, .cases-form select, .cases-form textarea {
-      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); outline: none; resize: vertical;
-    }
-    .cases-form input:focus, .cases-form select:focus, .cases-form textarea:focus { border-color: var(--app-accent); }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .primary, .ghost {
-      appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
-      background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);
-    }
-    .ghost { background: transparent; border-color: var(--separator); color: var(--tg-theme-text-color); }
+    .cases-form input:focus,.cases-form select:focus,.cases-form textarea:focus{ border-color:var(--app-accent); }
+    .form-actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .primary,.ghost{ appearance:none; border:1px solid transparent; padding:10px 12px; border-radius:12px; cursor:pointer;
+      background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); }
+    .ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
 
-    .cases-list { display: grid; gap: 8px; }
-    .case-card {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 6px; position: relative;
-    }
-    .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-    .case-number { font-weight: 700; overflow-wrap: anywhere; }
-    .badge {
-      font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator);
-      color: var(--tg-theme-hint-color);
-    }
-    .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
-    .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
-    .case-row span { min-width: 0; overflow-wrap: anywhere; }
+    .has-suggest{ position:relative; }
+    .suggest{ position:absolute; top:100%; left:0; right:0; z-index:10; background:var(--tg-theme-bg-color);
+      border:1px solid var(--separator); border-radius:12px; margin-top:6px; max-height:220px; overflow:auto;
+      box-shadow:0 6px 24px rgba(0,0,0,.25); }
+    .suggest-item{ padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; gap:12px; }
+    .suggest-item:hover, .suggest-item[aria-selected="true"]{ background:var(--tg-theme-secondary-bg-color); }
+    .suggest-item .hint{ color:var(--tg-theme-hint-color); font-size:12px; }
 
-    /* Кнопки действий — адаптивная сетка */
-    .case-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 8px; margin-top: 6px;
-    }
-    .case-actions .ghost { width: 100%; }
+    .cases-list{ display:grid; gap:8px; margin-top:8px; }
+    .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:6px; }
+    .case-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .case-number{ font-weight:700; }
+    .badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--separator); color:var(--tg-theme-hint-color); }
+    .badge.active{ color:var(--app-accent); border-color:var(--app-accent); }
+    .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
+    .case-actions{ display:flex; gap:8px; margin-top:6px; }
 
-    .cases-empty { border: 1px dashed var(--separator); border-radius: 16px; padding: 20px; text-align: center; }
-    .cases-empty .emoji { font-size: 28px; margin-bottom: 6px; }
-    .cases-empty .title { font-weight: 700; margin-bottom: 4px; }
-    .cases-empty .hint { color: var(--tg-theme-hint-color); margin-bottom: 10px; }
+    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
+    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
+    .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
+    .list-spacer{ height:16px; }
 
-    /* Подсветки и плашки */
-    .case-card.today { box-shadow: 0 0 0 1px var(--app-accent) inset; }
-    .pill { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--app-accent); color: var(--app-accent); }
-    .today-pill { margin-left: 6px; }
-    .done-pill { border-color: var(--tg-theme-hint-color); color: var(--tg-theme-hint-color); margin-left: 6px; }
-
-    /* Подсказки по делу */
-    .has-suggest { position: relative; }
-    .suggest {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
-      background: var(--tg-theme-bg-color); border: 1px solid var(--separator);
-      border-radius: 12px; margin-top: 6px; max-height: 220px; overflow: auto;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
-    }
-    .suggest-item { padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
-    .suggest-item:hover, .suggest-item[aria-selected="true"] { background: var(--tg-theme-secondary-bg-color); }
-    .suggest-item .hint { color: var(--tg-theme-hint-color); font-size: 12px; }
-
-    @media (max-width: 520px) {
-      .cases-form .grid { grid-template-columns: 1fr; }
-      .suggest { max-height: 50vh; }
-    }
+    @media (max-width:520px){ .cases-form .grid{ grid-template-columns:1fr; } .suggest{ max-height:50vh; } }
   </style>
 
-  <!-- Логика (инертный скрипт) -->
   <script type="text/plain" id="tasks-inline-js">
-  (function () {
-    const DAY = 24*60*60*1000;
+  (function(){
+    const DAY=24*60*60*1000;
 
-    const nowTs = () => Date.now();
-    function toTs(dateStr, timeStr) {
-      if (!dateStr) return NaN;
-      const t = timeStr && /^\d{2}:\d{2}$/.test(timeStr) ? timeStr : '00:00';
-      const iso = dateStr + 'T' + t + ':00';
-      const ts = Date.parse(iso);
-      return isNaN(ts) ? NaN : ts;
-    }
-    function fmtDate(dateStr) {
-      if (!dateStr) return '—';
-      try { return new Date(dateStr).toLocaleDateString('ru-RU'); } catch (_) { return '—'; }
-    }
-    function isSameDay(dateStr) {
-      if (!dateStr) return false;
-      try {
-        const d = new Date(dateStr); const n = new Date();
-        return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
-      } catch(_) { return false; }
-    }
+    function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
+    const nowTs=()=>Date.now();
+    function toTs(dt){ if(!dt) return NaN; const ts=Date.parse(dt); return isNaN(ts)?NaN:ts; }
+    function fmtDateTime(dt){ try{ const d=new Date(dt); return d.toLocaleString('ru-RU'); }catch(_){ return '—'; } }
 
-    function loadCasesIndex() {
-      try {
-        const raw = localStorage.getItem('tl_cases_v1');
-        if (!raw) return [];
-        const arr = JSON.parse(raw) || [];
-        const map = new Map();
-        arr.forEach(c => {
-          if (!c || !c.number) return;
-          const key = String(c.number).trim();
-          if (!map.has(key)) map.set(key, { number: key, debtor: c.debtor || '' });
-        });
+    function loadCasesIndex(){
+      try{
+        const raw=localStorage.getItem('tl_cases_v1'); if(!raw) return [];
+        const arr=JSON.parse(raw)||[]; const map=new Map();
+        arr.forEach(c=>{ if(!c||!c.number) return; const key=String(c.number).trim();
+          if(!map.has(key)) map.set(key,{number:key, debtor:c.debtor||''}); });
         return Array.from(map.values());
-      } catch(_) { return []; }
-    }
-
-    function buildSuggestions($box, casesIndex, query) {
-      if (!$box) return;
-      const q = (query || '').toLowerCase().trim();
-      let items = !q ? casesIndex.slice(0,7) : casesIndex.filter(c => c.number.toLowerCase().includes(q)).slice(0,7);
-      if (!items.length) { $box.hidden = true; $box.innerHTML=''; return; }
-      $box.innerHTML = items.map(c => `
-        <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor}">
-          <span>${c.number}</span>
-          <span class="hint">${c.debtor || ''}</span>
-        </div>
-      `).join('');
-      $box.hidden = false;
+      }catch(_){ return []; }
     }
 
     window.TASKS = {
-      LS_KEY: 'tl_tasks_v1',
-      data: [],
-      state: { query: '', filter: 'all' },
-      editingId: null,
-      casesIndex: [],
+      LS_KEY:'tl_tasks_v1',
+      data:[],
+      casesIndex:[],
+      state:{ query:'', filter:'all' },
+      editingId:null,
 
-init() {
-  try {
-    const raw = localStorage.getItem(this.LS_KEY);
-    this.data = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(this.data)) this.data = [];
-  } catch (e) {
-    this.data = [];
-  }
+      refreshCasesIndex(){ this.casesIndex=loadCasesIndex(); },
 
-  // Никаких демо-данных
-  this.autoArchiveCompleted && this.autoArchiveCompleted();
-  this.render();
-},
+      init(){
+        try{ const raw=localStorage.getItem(this.LS_KEY); this.data=raw?JSON.parse(raw):[]; if(!Array.isArray(this.data)) this.data=[]; }catch(e){ this.data=[]; }
+        this.refreshCasesIndex();
+        this.autoArchiveCompleted();
+        this.initCaseSuggest();
+        this.render();
+      },
 
-
-      save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
-
-      setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },
-
-      setFilter(f) {
-        this.state.filter = f;
-        document.querySelectorAll('#tasks-page .chip').forEach(ch => {
-          ch.classList.toggle('active', ch.dataset.filter === f);
-          ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
+      save(){ localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
+      setQuery(v){ this.state.query=(v||'').toLowerCase(); this.render(); },
+      setFilter(f){
+        this.state.filter=f;
+        document.querySelectorAll('#tasks-page .chip').forEach(ch=>{
+          ch.classList.toggle('active', ch.dataset.filter===f);
+          ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
         });
         this.render();
       },
 
-      toggleForm(force) {
-        const wrap = document.getElementById('tasks-form-wrap');
-        const btn  = document.getElementById('tasks-add-btn');
-        const isOpen = wrap.classList.contains('open');
-        const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
-        if (shouldOpen === isOpen) return;
-
-        wrap.style.overflow = 'hidden';
-        if (shouldOpen) {
-          wrap.classList.add('open');
-          wrap.style.maxHeight = wrap.scrollHeight + 'px';
-          btn?.setAttribute('aria-expanded', 'true');
-          wrap?.setAttribute('aria-hidden', 'false');
-          document.getElementById('t-title').focus();
-        } else {
-          wrap.style.maxHeight = wrap.scrollHeight + 'px';
-          requestAnimationFrame(() => { wrap.style.maxHeight = '0px'; });
-          btn?.setAttribute('aria-expanded', 'false');
-          wrap?.setAttribute('aria-hidden', 'true');
-          wrap.addEventListener('transitionend', () => {
-            wrap.classList.remove('open');
-            TASKS.cancelEdit();
-          }, { once: true });
-        }
+      toggleForm(force){
+        const wrap=document.getElementById('tasks-form-wrap'); const btn=document.getElementById('tasks-add-btn');
+        const isOpen=wrap.classList.contains('open'); const shouldOpen=(typeof force==='boolean')?force:!isOpen; if(shouldOpen===isOpen) return;
+        wrap.style.overflow='hidden';
+        if(shouldOpen){ wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true); document.getElementById('t-title').focus(); }
+        else{ wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; }); setExpanded(btn,wrap,false); wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); TASKS.cancelEdit(); },{once:true}); }
       },
 
-      initCaseSuggest() {
-        const input = document.getElementById('t-case');
-        const box   = document.getElementById('t-case-suggest');
-        if (!input || !box) return;
-
-        const update = () => buildSuggestions(box, this.casesIndex, input.value);
-        input.addEventListener('input', update);
-        input.addEventListener('focus', update);
-        input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 120));
-
-        box.addEventListener('mousedown', (e) => {
-          const item = e.target.closest('.suggest-item');
-          if (!item) return;
-          const number = item.getAttribute('data-number') || '';
-          const debtor = item.getAttribute('data-debtor') || '';
-          input.value = number;
-          const d = document.getElementById('t-debtor');
-          if (d && !d.value && debtor) d.value = debtor;
-          box.hidden = true;
-        });
-      },
-
-      // Редактирование
-      edit(id) {
-        const item = this.data.find(x => x.id === id);
-        if (!item) return;
-        this.editingId = id;
-
-        document.getElementById('t-title').value = item.title || '';
-        document.getElementById('t-case').value  = item.caseNumber || '';
-        document.getElementById('t-debtor').value= item.debtor || '';
-        document.getElementById('t-date').value  = item.date || '';
-        document.getElementById('t-time').value  = item.time || '';
-        document.getElementById('t-note').value  = item.note || '';
-        document.getElementById('t-status').value= item.status || 'active';
-        document.getElementById('tasks-submit-btn').textContent = 'Обновить';
-
-        const wrap = document.getElementById('tasks-form-wrap');
-        if (!wrap.classList.contains('open')) this.toggleForm(true);
-        else document.getElementById('t-title').focus();
-      },
-
-      cancelEdit() {
-        this.editingId = null;
-        document.getElementById('tasks-submit-btn').textContent = 'Сохранить';
-        this.clearForm();
-      },
-
-      submit(ev) {
-        ev && ev.preventDefault();
-        const title      = document.getElementById('t-title').value.trim();
-        const caseNumber = document.getElementById('t-case').value.trim();
-        const debtor     = document.getElementById('t-debtor').value.trim();
-        const date       = document.getElementById('t-date').value;
-        const time       = document.getElementById('t-time').value;
-        const note       = document.getElementById('t-note').value.trim();
-        const status     = document.getElementById('t-status').value;
-
-        if (!title || !caseNumber || !date) { alert('Заполни обязательные поля: Название, Номер дела и Срок.'); return; }
-
-        if (this.editingId) {
-          const idx = this.data.findIndex(x => x.id === this.editingId);
-          if (idx !== -1) {
-            const prev = this.data[idx];
-            this.data[idx] = { ...prev, title, caseNumber, debtor, date, time, note, status, updatedAt: Date.now() };
-          }
-        } else {
-          this.data.push({
-            id: String(Date.now()),
-            title, caseNumber, debtor, date, time, note,
-            status: status === 'archived' ? 'archived' : 'active',
-            done: false,
-            doneAt: null,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+      // Подсказки
+      initCaseSuggest(){
+        const cI=document.getElementById('t-case'), cBox=document.getElementById('t-case-suggest');
+        if(cI && cBox){
+          const update=()=>{ this.refreshCasesIndex(); this.buildCaseSuggestions(cBox, cI.value); };
+          cI.addEventListener('input', update); cI.addEventListener('focus', update);
+          cI.addEventListener('blur', ()=>setTimeout(()=>{ cBox.hidden=true; },120));
+          cBox.addEventListener('mousedown',(e)=>{
+            const item=e.target.closest('.suggest-item'); if(!item) return;
+            cI.value=item.getAttribute('data-number')||'';
+            const d=document.getElementById('t-debtor'); if(d && !d.value) d.value=item.getAttribute('data-debtor')||'';
+            cBox.hidden=true;
           });
         }
-
-        this.save();
-        this.cancelEdit();
-        this.toggleForm(false);
-        this.autoArchiveRules(); // вдруг дата старая или уже «готово»
-        this.render();
+        const dI=document.getElementById('t-debtor'), dBox=document.getElementById('t-debtor-suggest');
+        if(dI && dBox){
+          const updateD=()=>{ this.refreshCasesIndex(); this.buildDebtorSuggestions(dBox, dI.value); };
+          dI.addEventListener('input', updateD); dI.addEventListener('focus', updateD);
+          dI.addEventListener('blur', ()=>setTimeout(()=>{ dBox.hidden=true; },120));
+          dBox.addEventListener('mousedown',(e)=>{
+            const item=e.target.closest('.suggest-item'); if(!item) return;
+            dI.value=item.getAttribute('data-debtor')||'';
+            const c=document.getElementById('t-case'); if(c && !c.value) c.value=item.getAttribute('data-number')||'';
+            dBox.hidden=true;
+          });
+        }
+      },
+      buildCaseSuggestions($box, query){
+        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
+        let items=!q?list.slice(0,7):list.filter(c=>c.number.toLowerCase().includes(q)).slice(0,7);
+        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
+        $box.innerHTML=items.map(c=>`
+          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}">
+            <span>${c.number}</span><span class="hint">${c.debtor||''}</span>
+          </div>`).join('');
+        $box.hidden=false;
+      },
+      buildDebtorSuggestions($box, query){
+        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
+        let items=!q?list.slice(0,7):list.filter(c=>(c.debtor||'').toLowerCase().includes(q)).slice(0,7);
+        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
+        $box.innerHTML=items.map(c=>`
+          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}">
+            <span>${c.debtor||''}</span><span class="hint">${c.number}</span>
+          </div>`).join('');
+        $box.hidden=false;
       },
 
-      clearForm() {
-        ['t-title','t-case','t-debtor','t-date','t-time','t-note'].forEach(id => {
-          const el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('t-status').value = 'active';
+      // CRUD
+      edit(id){
+        const i=this.data.find(x=>x.id===id); if(!i) return; this.editingId=id;
+        document.getElementById('t-title').value=i.title||''; document.getElementById('t-case').value=i.caseNumber||'';
+        document.getElementById('t-debtor').value=i.debtor||''; document.getElementById('t-due').value=i.due||'';
+        document.getElementById('t-note').value=i.note||''; document.getElementById('t-status').value=i.status||'active';
+        document.getElementById('tasks-submit-btn').textContent='Обновить';
+        const wrap=document.getElementById('tasks-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
+      },
+      cancelEdit(){ this.editingId=null; document.getElementById('tasks-submit-btn').textContent='Сохранить';
+        ['t-title','t-case','t-debtor','t-due','t-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('t-status').value='active';
+      },
+      submit(ev){
+        ev.preventDefault();
+        const title=document.getElementById('t-title').value.trim();
+        const caseNumber=document.getElementById('t-case').value.trim();
+        const debtor=document.getElementById('t-debtor').value.trim();
+        const due=document.getElementById('t-due').value;
+        const note=document.getElementById('t-note').value.trim();
+        const status=document.getElementById('t-status').value;
+        if(!title){ alert('Укажи название задачи.'); return; }
+
+        if(this.editingId){
+          const i=this.data.findIndex(x=>x.id===this.editingId);
+          if(i!==-1) this.data[i]={...this.data[i], title, caseNumber, debtor, due, note, status, updatedAt:Date.now()};
+        } else {
+          this.data.push({ id:String(Date.now()), title, caseNumber, debtor, due, note,
+            status: status||'active', createdAt:Date.now(), updatedAt:Date.now() });
+        }
+        this.save(); this.cancelEdit(); this.toggleForm(false); this.autoArchiveCompleted(); this.render();
+      },
+      markDone(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status='done'; it.updatedAt=Date.now(); this.save(); this.render(); },
+      toggleArchive(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status=it.status==='archived'?'active':'archived'; it.updatedAt=Date.now(); this.save(); this.render(); },
+      remove(id){ if(!confirm('Удалить задачу?')) return; this.data=this.data.filter(x=>x.id!==id); this.save(); this.render(); },
+
+      // автоархив «выполнено» спустя 1 день
+      autoArchiveCompleted(){
+        const now=nowTs(); let dirty=false;
+        this.data.forEach(t=>{ if(t.status==='done'){ const upd=t.updatedAt||t.createdAt||0; if(now - upd >= DAY){ t.status='archived'; dirty=true; } }});
+        if(dirty) this.save();
       },
 
-      toggleDone(id) {
-        const item = this.data.find(x => x.id === id); if (!item) return;
-        item.done = !item.done;
-        item.doneAt = item.done ? Date.now() : null;
-        item.updatedAt = Date.now();
-        this.save();
-        this.autoArchiveRules(); // правило «готово > 1 дня»
-        this.render();
-      },
+      // Рендер
+      isOverdue(t){ const ts=toTs(t.due); return !isNaN(ts) && ts < nowTs() && t.status!=='done' && t.status!=='archived'; },
+      isUpcoming(t){ const ts=toTs(t.due); return !isNaN(ts) && ts >= nowTs(); },
 
-      remove(id) {
-        if (!confirm('Удалить задачу? Действие необратимо.')) return;
-        this.data = this.data.filter(x => x.id !== id);
-        this.save(); this.render();
-      },
+      render(){
+        const list=document.getElementById('tasks-list'); const empty=document.getElementById('tasks-empty');
+        let items=this.data.slice(); const q=this.state.query;
 
-      // Автоархив:
-      // 1) «Выполнено» более 1 суток -> архив
-      // 2) > 3 дней после срока, запись не менялась после срока и не «Выполнено»
-      autoArchiveRules() {
-        const now = nowTs();
-        let changed = false;
-
-        this.data.forEach(i => {
-          if (i.status !== 'active') return;
-          const deadlineTs = toTs(i.date, i.time);
-          const upd = i.updatedAt || i.createdAt || 0;
-
-          if (i.done && i.doneAt && now - i.doneAt >= DAY) {
-            i.status = 'archived';
-            changed = true;
-            return;
-          }
-          if (!isNaN(deadlineTs)) {
-            const threshold = deadlineTs + 3*DAY;
-            if (now >= threshold && upd < deadlineTs && !i.done) {
-              i.status = 'archived';
-              changed = true;
-            }
-          }
-        });
-
-        if (changed) this.save();
-      },
-
-      isUpcoming(item) {
-        const ts = toTs(item.date, item.time);
-        return !isNaN(ts) && ts >= nowTs();
-      },
-
-      render() {
-        const list = document.getElementById('tasks-list');
-        const empty = document.getElementById('tasks-empty');
-
-        let items = this.data.slice();
-        const q = this.state.query;
-        if (q) {
-          items = items.filter(i =>
-            (i.title || '').toLowerCase().includes(q) ||
-            (i.caseNumber || '').toLowerCase().includes(q) ||
-            (i.debtor || '').toLowerCase().includes(q) ||
-            (i.note || '').toLowerCase().includes(q) ||
-            (i.date || '').includes(q) || (i.time || '').includes(q)
+        if(q){
+          items=items.filter(i =>
+            (i.title||'').toLowerCase().includes(q) ||
+            (i.caseNumber||'').toLowerCase().includes(q) ||
+            (i.debtor||'').toLowerCase().includes(q) ||
+            (i.note||'').toLowerCase().includes(q)
           );
         }
+        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
+        else if(this.state.filter==='overdue') items=items.filter(i=>i.status!=='archived' && this.isOverdue(i));
+        else if(this.state.filter==='upcoming') items=items.filter(i=>i.status!=='archived' && this.isUpcoming(i));
 
-        if (this.state.filter === 'archived') {
-          items = items.filter(i => i.status === 'archived');
-        } else if (this.state.filter === 'upcoming') {
-          items = items.filter(i => i.status !== 'archived' && this.isUpcoming(i));
-        } else if (this.state.filter === 'past') {
-          items = items.filter(i => i.status !== 'archived' && !this.isUpcoming(i));
-        }
+        items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (this.isOverdue(b)-this.isOverdue(a)) || (toTs(a.due)-toTs(b.due)));
 
-        const now = nowTs();
-        items.sort((a,b) => {
-          const at = toTs(a.date, a.time), bt = toTs(b.date, b.time);
-          const aFuture = !isNaN(at) && at >= now;
-          const bFuture = !isNaN(bt) && bt >= now;
-          if (this.state.filter === 'upcoming') return at - bt;
-          if (this.state.filter === 'past')     return bt - at;
-          if (aFuture !== bFuture) return aFuture ? -1 : 1;
-          return aFuture ? (at - bt) : (bt - at);
-        });
+        if(!items.length){ list.innerHTML=''; empty.hidden=false; window.adjustBottomSpacer&&window.adjustBottomSpacer(); return; }
+        empty.hidden=true;
 
-        if (!items.length) { list.innerHTML = ''; empty.hidden = false; return; }
-        empty.hidden = true;
-
-        list.innerHTML = items.map(i => {
-          const ts = toTs(i.date, i.time);
-          const upcoming = !isNaN(ts) && ts >= now;
-          const dt = `${fmtDate(i.date)} ${i.time ? i.time : ''}`.trim();
-          const today = isSameDay(i.date);
+        list.innerHTML=items.map(i=>{
+          const dueStr=i.due?fmtDateTime(i.due):'—'; const overdue=this.isOverdue(i); const badge = i.status==='archived'?'Архив':(i.status==='done'?'Готово':(overdue?'Просрочено':'Активная'));
+          const badgeCls = (i.status==='archived')?'':(i.status==='done'?'active':(overdue?'':'active'));
           return `
-            <article class="case-card ${today ? 'today' : ''}" role="listitem" data-id="${i.id}">
+            <article class="case-card" role="listitem" data-id="${i.id}">
               <div class="case-head">
-                <div class="case-number">
-                  ${i.title}
-                  ${today ? '<span class="pill today-pill">Сегодня</span>' : ''}
-                  ${i.done ? '<span class="pill done-pill">Готово</span>' : ''}
-                </div>
-                <div class="badge ${i.status === 'active' ? 'active' : ''}">
-                  ${i.status === 'active' ? (upcoming ? 'Предстоящая' : 'Просроченная') : 'Архив'}
-                </div>
+                <div class="case-number">${i.title}</div>
+                <div class="badge ${badgeCls}">${badge}</div>
               </div>
               <div class="case-row">
-                <span><strong>Дело:</strong> ${i.caseNumber}</span>
-                ${i.debtor ? `<span><strong>Должник:</strong> ${i.debtor}</span>` : ''}
-                <span><strong>Срок:</strong> ${dt || '—'}</span>
+                ${i.caseNumber?`<span><strong>Дело:</strong> ${i.caseNumber}</span>`:''}
+                ${i.debtor?`<span><strong>Должник:</strong> ${i.debtor}</span>`:''}
+                ${i.due?`<span><strong>Срок:</strong> ${dueStr}</span>`:''}
               </div>
-              ${i.note ? `<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>` : ''}
+              ${i.note?`<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>`:''}
               <div class="case-actions">
-                <button class="ghost" onclick="TASKS && TASKS.toggleDone('${i.id}')">
-                  ${i.done ? 'Снять «Выполнено»' : 'Отметить «Выполнено»'}
-                </button>
+                ${i.status!=='done' && i.status!=='archived' ? `<button class="ghost" onclick="TASKS && TASKS.markDone('${i.id}')">Отметить «Выполнено»</button>`:''}
                 <button class="ghost" onclick="TASKS && TASKS.edit('${i.id}')">Редактировать</button>
                 <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>
               </div>
             </article>
           `;
         }).join('');
+
+        window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
 
-    // Автоинициализация
     window.TASKS.init();
   })();
   </script>
 
-  <!-- Триггер выполнения -->
   <img alt="" aria-hidden="true" style="display:none"
        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
        onload='(function(){var s=document.getElementById("tasks-inline-js"); if(s){ new Function(s.textContent)(); }})();' />

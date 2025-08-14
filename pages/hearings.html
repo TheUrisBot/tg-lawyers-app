@@ -1,12 +1,12 @@
 <section class="page hearings" id="hearings-page" aria-labelledby="hearings-title">
   <h1 id="hearings-title">Заседания</h1>
 
-  <!-- Панель инструментов -->
+  <!-- Панель -->
   <div class="cases-toolbar" role="region" aria-label="Поиск и действия">
     <div class="cases-search">
       <input id="hearings-search-input" type="search" placeholder="Номер дела, должник, суд, зал, примечание"
              aria-label="Поиск по заседаниям" oninput="HEARINGS && HEARINGS.setQuery(this.value)" />
-      <button class="ghost" aria-label="Очистить поиск"
+      <button class="ghost" aria-label="Очистить"
               onclick="HEARINGS && HEARINGS.setQuery(''); const i=document.getElementById('hearings-search-input'); i.value=''; i.focus();">✕</button>
     </div>
     <button class="primary" id="hearings-add-btn" aria-expanded="false" onclick="HEARINGS && HEARINGS.toggleForm()">Добавить</button>
@@ -20,9 +20,8 @@
     <button role="tab" class="chip" data-filter="archived" onclick="HEARINGS && HEARINGS.setFilter('archived')">Архив</button>
   </div>
 
-  
-    <!-- Сворачиваемый блок формы -->
-  <div id="hearings-form-wrap" class="collapse" aria-hidden="true">
+  <!-- Форма НАД календарём -->
+  <div id="hearings-form-wrap" class="collapse" aria-hidden="true" style="margin-top:10px;">
     <form id="hearings-form" class="cases-form" onsubmit="HEARINGS && HEARINGS.submit(event)">
       <div class="grid">
         <label class="has-suggest">
@@ -30,9 +29,10 @@
           <input type="text" id="h-case" required placeholder="А40-12345/2025" autocomplete="off" />
           <div id="h-case-suggest" class="suggest" role="listbox" hidden></div>
         </label>
-        <label>
+        <label class="has-suggest">
           <span>Должник</span>
-          <input type="text" id="h-debtor" placeholder="Иванов И.И. / ООО «Рога и Копыта»" />
+          <input type="text" id="h-debtor" placeholder="Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
+          <div id="h-debtor-suggest" class="suggest" role="listbox" hidden></div>
         </label>
         <label>
           <span>Дата *</span>
@@ -52,7 +52,7 @@
         </label>
         <label style="grid-column: 1 / -1;">
           <span>Примечание</span>
-          <textarea id="h-note" rows="2" placeholder="Произвольные комментарии по заседанию"></textarea>
+          <textarea id="h-note" rows="2" placeholder="Комментарий по заседанию"></textarea>
         </label>
         <label>
           <span>Статус</span>
@@ -69,8 +69,8 @@
     </form>
   </div>
 
-  <!-- КАЛЕНДАРЬ -->
-  <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (текущий месяц)"></div>
+  <!-- Календарь -->
+  <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (месяц)"></div>
 
   <!-- Плашка выбранной даты -->
   <div id="hearings-day-chip" class="day-chip" hidden>
@@ -78,205 +78,133 @@
     <button class="ghost small" onclick="HEARINGS && HEARINGS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
   </div>
 
-
-
   <!-- Список заседаний -->
   <div id="hearings-list" class="cases-list" role="list"></div>
-  <div class="list-spacer" id="hearings-spacer" aria-hidden="true"></div>
+  <div class="list-spacer" aria-hidden="true"></div>
 
   <!-- Пустое состояние -->
   <div id="hearings-empty" class="cases-empty" hidden>
     <div class="emoji" aria-hidden="true">🗓️</div>
     <div class="title">Пока нет заседаний</div>
-    <div class="hint">Добавь первое заседание: номер дела, дата и, по возможности, время.</div>
+    <div class="hint">Добавь заседание: номер дела и дата обязательны.</div>
     <button class="primary" onclick="HEARINGS && HEARINGS.toggleForm(true)">Добавить заседание</button>
   </div>
 
-  <!-- Стили -->
   <style>
-    .cases-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
-    .cases-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-    .cases-search input {
-      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); outline: none;
-    }
-    .cases-search input:focus { border-color: var(--app-accent); }
-    .cases-filters { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip { border: 1px solid var(--separator); background: transparent; color: var(--tg-theme-text-color);
-      padding: 6px 10px; border-radius: 999px; cursor: pointer; }
-    .chip.active { border-color: var(--app-accent); color: var(--app-accent); font-weight: 600; }
+    .cases-toolbar{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+    .cases-search{ display:grid; grid-template-columns:1fr auto; gap:6px; }
+    .cases-search input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color); outline:none; }
+    .cases-search input:focus{ border-color:var(--app-accent); }
+    .cases-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .chip{ border:1px solid var(--separator); background:transparent; color:var(--tg-theme-text-color);
+      padding:6px 10px; border-radius:999px; cursor:pointer; }
+    .chip.active{ border-color:var(--app-accent); color:var(--app-accent); font-weight:600; }
 
-    /* Календарь */
-    .cal { border: 1px solid var(--separator); border-radius: 16px; background: var(--tg-theme-secondary-bg-color); padding: 10px; display: grid; gap: 8px; }
-    .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    .cal-title { font-weight: 700; }
-    .cal-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .cal-nav .navbtn,
-    .cal-nav .ghost.small {
-      padding: 6px 10px; border-radius: 10px; border: 1px solid var(--separator); background: transparent; cursor: pointer;
-      color: var(--tg-theme-text-color);
-    }
-    .cal-nav .navbtn:hover,
-    .cal-nav .ghost.small:hover { border-color: var(--app-accent); color: var(--app-accent); }
+    .collapse{ max-height:0; overflow:hidden; opacity:0; transition:max-height 240ms ease, opacity 240ms ease; }
+    .collapse.open{ opacity:1; }
 
-    .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; color: var(--tg-theme-hint-color); font-size: 12px; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-    .cal-day {
-      position: relative; padding: 10px 0; text-align: center; border-radius: 10px; cursor: pointer;
-      user-select: none; background: var(--tg-theme-bg-color); border: 1px solid transparent;
+    .cases-form{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:12px; margin-top:8px; }
+    .cases-form .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .cases-form label{ display:grid; gap:6px; font-size:12px; color:var(--tg-theme-hint-color); }
+    .cases-form input,.cases-form select,.cases-form textarea{
+      padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); outline:none; resize:vertical;
     }
-    .cal-day.disabled { opacity: .4; cursor: default; }
-    .cal-day.today { outline: 1px dashed var(--app-accent); }
-    .cal-day.selected { border-color: var(--app-accent); box-shadow: 0 0 0 1px var(--app-accent) inset; }
-    .cal-num { font-weight: 600; }
-    .cal-hint { position: absolute; inset: 2px; border-radius: 8px; pointer-events: none; opacity: 0; }
-    /* Уровни насыщенности по количеству дел */
-    .cal-day.has-1 { border-color: var(--app-accent); }
-    .cal-day.has-3 .cal-hint { background: var(--app-accent); opacity: .12; }
-    .cal-day.has-6 .cal-hint { background: var(--app-accent); opacity: .22; }
-    .cal-day.has-10 .cal-hint{ background: var(--app-accent); opacity: .32; }
+    .cases-form input:focus,.cases-form select:focus,.cases-form textarea:focus{ border-color:var(--app-accent); }
+    .form-actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .primary,.ghost{ appearance:none; border:1px solid transparent; padding:10px 12px; border-radius:12px; cursor:pointer;
+      background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); }
+    .ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
 
-    .day-chip { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; color: var(--tg-theme-hint-color); }
-    .day-chip .small { padding: 6px 10px; border-radius: 10px; }
+    .has-suggest{ position:relative; }
+    .suggest{ position:absolute; top:100%; left:0; right:0; z-index:10; background:var(--tg-theme-bg-color);
+      border:1px solid var(--separator); border-radius:12px; margin-top:6px; max-height:220px; overflow:auto;
+      box-shadow:0 6px 24px rgba(0,0,0,.25); }
+    .suggest-item{ padding:10px 12px; cursor:pointer; display:flex; justify-content:space-between; gap:12px; }
+    .suggest-item:hover, .suggest-item[aria-selected="true"]{ background:var(--tg-theme-secondary-bg-color); }
+    .suggest-item .hint{ color:var(--tg-theme-hint-color); font-size:12px; }
 
-    /* Сворачиваемая область и прочее — как раньше */
-    .collapse { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 240ms ease, opacity 240ms ease; }
-    .collapse.open { opacity: 1; }
+    .cal{ border:1px solid var(--separator); border-radius:16px; background:var(--tg-theme-secondary-bg-color); padding:10px; display:grid; gap:8px; margin-top:8px; }
+    .cal-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .cal-title{ font-weight:700; }
+    .cal-nav{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .cal-nav .navbtn,.cal-nav .ghost.small{ padding:6px 10px; border-radius:10px; border:1px solid var(--separator); background:transparent; cursor:pointer; color:var(--tg-theme-text-color); }
+    .cal-nav .navbtn:hover,.cal-nav .ghost.small:hover{ border-color:var(--app-accent); color:var(--app-accent); }
+    .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; color:var(--tg-theme-hint-color); font-size:12px; }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-day{ position:relative; padding:10px 0; text-align:center; border-radius:10px; cursor:pointer; user-select:none; background:var(--tg-theme-bg-color); border:1px solid transparent; }
+    .cal-day.disabled{ opacity:.4; cursor:default; }
+    .cal-day.today{ outline:1px dashed var(--app-accent); }
+    .cal-day.selected{ border-color:var(--app-accent); box-shadow:0 0 0 1px var(--app-accent) inset; }
+    .cal-num{ font-weight:600; }
+    .cal-hint{ position:absolute; inset:2px; border-radius:8px; pointer-events:none; opacity:0; }
+    .cal-day.has-1{ border-color:var(--app-accent); }
+    .cal-day.has-3 .cal-hint{ background:var(--app-accent); opacity:.12; }
+    .cal-day.has-6 .cal-hint{ background:var(--app-accent); opacity:.22; }
+    .cal-day.has-10 .cal-hint{ background:var(--app-accent); opacity:.32; }
 
-    .cases-form {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 12px;
-    }
-    .cases-form .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .cases-form label { display: grid; gap: 6px; font-size: 12px; color: var(--tg-theme-hint-color); }
-    .cases-form input, .cases-form select, .cases-form textarea {
-      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--separator);
-      background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); outline: none; resize: vertical;
-    }
-    .cases-form input:focus, .cases-form select:focus, .cases-form textarea:focus { border-color: var(--app-accent); }
-    .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .primary, .ghost {
-      appearance: none; border: 1px solid transparent; padding: 10px 12px; border-radius: 12px; cursor: pointer;
-      background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color);
-    }
-    .ghost { background: transparent; border-color: var(--separator); color: var(--tg-theme-text-color); }
+    .day-chip{ display:flex; align-items:center; gap:8px; margin:6px 0 2px; color:var(--tg-theme-hint-color); }
+    .day-chip .small{ padding:6px 10px; border-radius:10px; }
 
-    .cases-list { display: grid; gap: 8px; }
-    .case-card {
-      border: 1px solid var(--separator); background: var(--tg-theme-secondary-bg-color);
-      border-radius: 16px; padding: 12px; display: grid; gap: 6px; position: relative;
-    }
-    .case-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-    .case-number { font-weight: 700; }
-    .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--separator); color: var(--tg-theme-hint-color); }
-    .badge.active { color: var(--app-accent); border-color: var(--app-accent); }
-    .case-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--tg-theme-hint-color); font-size: 14px; }
-    .case-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .cases-list{ display:grid; gap:8px; margin-top:8px; }
+    .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:6px; }
+    .case-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .case-number{ font-weight:700; }
+    .badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--separator); color:var(--tg-theme-hint-color); }
+    .badge.active{ color:var(--app-accent); border-color:var(--app-accent); }
+    .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
+    .case-actions{ display:flex; gap:8px; margin-top:6px; }
+    .pill.today-pill{ margin-left:8px; padding:2px 8px; border-radius:999px; border:1px solid var(--app-accent); color:var(--app-accent); font-size:12px; }
 
-    .has-suggest { position: relative; }
-    .suggest {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
-      background: var(--tg-theme-bg-color); border: 1px solid var(--separator);
-      border-radius: 12px; margin-top: 6px; max-height: 220px; overflow: auto;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
-    }
-    .suggest-item { padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
-    .suggest-item:hover, .suggest-item[aria-selected="true"] { background: var(--tg-theme-secondary-bg-color); }
-    .suggest-item .hint { color: var(--tg-theme-hint-color); font-size: 12px; }
+    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
+    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
+    .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
+    .list-spacer{ height:16px; }
 
-    @media (max-width: 520px) {
-      .cases-form .grid { grid-template-columns: 1fr; }
-      .suggest { max-height: 50vh; }
-    }
+    @media (max-width:520px){ .cases-form .grid{ grid-template-columns:1fr; } .suggest{ max-height:50vh; } }
   </style>
 
-  <!-- Логика (инертный скрипт) -->
   <script type="text/plain" id="hearings-inline-js">
-  (function () {
+  (function(){
     const DAY = 24*60*60*1000;
 
-    function setExpanded(btn, wrap, open) {
-      btn?.setAttribute('aria-expanded', String(open));
-      wrap?.setAttribute('aria-hidden', String(!open));
-    }
+    function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
     const nowTs = () => Date.now();
-    function toTs(dateStr, timeStr) {
-      if (!dateStr) return NaN;
-      const t = timeStr && /^\d{2}:\d{2}$/.test(timeStr) ? timeStr : '00:00';
-      const iso = dateStr + 'T' + t + ':00';
-      const ts = Date.parse(iso);
-      return isNaN(ts) ? NaN : ts;
-    }
-    function fmtDate(dateStr) {
-      if (!dateStr) return '—';
-      try { return new Date(dateStr).toLocaleDateString('ru-RU'); } catch (_) { return '—'; }
-    }
-    function fmtMonthTitle(date) {
-      return date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-    }
-    function fmtDayLabel(yyyy_mm_dd) {
-      try {
-        const d = new Date(yyyy_mm_dd);
-        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
-      } catch(_) { return yyyy_mm_dd; }
-    }
-    function isSameDay(dateStr) {
-      if (!dateStr) return false;
-      try {
-        const d = new Date(dateStr);
-        const n = new Date();
-        return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
-      } catch (_) { return false; }
-    }
-
-    // Дела из cases (для подсказок)
-    function loadCasesIndex() {
-      try {
-        const raw = localStorage.getItem('tl_cases_v1');
-        if (!raw) return [];
-        const arr = JSON.parse(raw) || [];
-        const map = new Map();
-        arr.forEach(c => {
-          if (!c || !c.number) return;
-          const key = String(c.number).trim();
-          if (!map.has(key)) map.set(key, { number: key, debtor: c.debtor || '', court: c.court || '' });
-        });
-        return Array.from(map.values());
-      } catch (_) { return []; }
-    }
-
-    // ===== КАЛЕНДАРЬ =====
-    function monthInfo(date) {
-      const y = date.getFullYear();
-      const m = date.getMonth(); // 0..11
-      const first = new Date(y, m, 1);
-      const last  = new Date(y, m + 1, 0);
-      const daysInMonth = last.getDate();
-      const dow = (first.getDay() + 6) % 7; // 0=пн..6=вс
-      return { y, m, daysInMonth, startOffset: dow };
-    }
-    function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+    function toTs(dateStr, timeStr){ if(!dateStr) return NaN; const t = timeStr && /^\d{2}:\d{2}$/.test(timeStr) ? timeStr : '00:00'; const ts=Date.parse(dateStr+'T'+t+':00'); return isNaN(ts)?NaN:ts; }
+    function fmtDate(d){ try{ return new Date(d).toLocaleDateString('ru-RU'); }catch(_){ return '—'; } }
+    function fmtMonthTitle(date){ return date.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}); }
+    function fmtDayLabel(s){ try{ const d=new Date(s); return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(_){return s;} }
+    function isSameDay(dateStr){ try{ const d=new Date(dateStr), n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate(); }catch(_){return false;} }
+    function pad2(n){return n<10?'0'+n:''+n;}
+    function monthInfo(date){ const y=date.getFullYear(), m=date.getMonth(); const first=new Date(y,m,1), last=new Date(y,m+1,0); const dow=(first.getDay()+6)%7; return {y,m,daysInMonth:last.getDate(),startOffset:dow}; }
     function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-    function shiftMonth(y, m, delta) {
-      const d = new Date(y, m, 1);
-      d.setMonth(d.getMonth() + delta);
-      return { year: d.getFullYear(), month: d.getMonth() };
+    function shiftMonth(y,m,delta){ const d=new Date(y,m,1); d.setMonth(d.getMonth()+delta); return { year:d.getFullYear(), month:d.getMonth() }; }
+
+    function loadCasesIndex(){
+      try{
+        const raw=localStorage.getItem('tl_cases_v1'); if(!raw) return [];
+        const arr=JSON.parse(raw)||[]; const map=new Map();
+        arr.forEach(c=>{ if(!c||!c.number) return; const key=String(c.number).trim(); if(!map.has(key)) map.set(key,{number:key, debtor:c.debtor||'', court:c.court||''}); });
+        return Array.from(map.values());
+      }catch(_){ return []; }
     }
 
-    function buildCalendarHTML(state, counts) {
-      const ref = new Date(state.calendar.year, state.calendar.month, 1);
-      const { y, m, daysInMonth, startOffset } = monthInfo(ref);
-      const monthName = fmtMonthTitle(ref);
-      const weekNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-      const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+    function buildCalendarHTML(state, counts){
+      const ref=new Date(state.calendar.year, state.calendar.month, 1);
+      const {y,m,daysInMonth,startOffset}=monthInfo(ref);
+      const monthName=fmtMonthTitle(ref);
+      const weekNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+      const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
 
-      // заголовок + навигация
       let head = `
         <div class="cal-head">
           <div class="cal-title">${monthName[0].toUpperCase()+monthName.slice(1)}</div>
           <div class="cal-nav">
-            <button type="button" class="navbtn" data-cal-prev aria-label="Предыдущий месяц">‹</button>
-            <button type="button" class="navbtn" data-cal-next aria-label="Следующий месяц">›</button>
+            <button type="button" class="navbtn" data-cal-prev>‹</button>
+            <button type="button" class="navbtn" data-cal-next>›</button>
             <button type="button" class="ghost small" data-cal-today>Сегодня</button>
             <button type="button" class="ghost small" data-cal-jump="+1">+1м</button>
             <button type="button" class="ghost small" data-cal-jump="+3">+3м</button>
@@ -285,406 +213,252 @@
         </div>
       `;
 
-      let cells = '';
-      for (let i=0; i<totalCells; i++) {
-        const dayNum = i - startOffset + 1;
-        if (dayNum < 1 || dayNum > daysInMonth) {
-          cells += `<div class="cal-day disabled" aria-hidden="true"></div>`;
-          continue;
-        }
-        const dateStr = ymDate(y, m, dayNum);
-        const cnt = counts[dateStr] || 0;
-        let cls = 'cal-day';
-        if (isSameDay(dateStr)) cls += ' today';
-        if (state.selectedDay === dateStr) cls += ' selected';
-
-        // уровни подсветки
-        if (cnt >= 10) cls += ' has-10';
-        else if (cnt >= 6) cls += ' has-6';
-        else if (cnt >= 3) cls += ' has-3';
-        else if (cnt >= 1) cls += ' has-1';
-
-        cells += `
-          <button type="button" class="${cls}" data-date="${dateStr}" aria-label="${dayNum}. ${monthName}, заседаний: ${cnt}">
-            <div class="cal-hint"></div>
-            <div class="cal-num">${dayNum}</div>
-          </button>
-        `;
+      let cells='';
+      for(let i=0;i<totalCells;i++){
+        const dayNum=i-startOffset+1;
+        if(dayNum<1||dayNum>daysInMonth){ cells+=`<div class="cal-day disabled" aria-hidden="true"></div>`; continue; }
+        const dateStr=ymDate(y,m,dayNum);
+        const cnt=counts[dateStr]||0;
+        let cls='cal-day'; if(isSameDay(dateStr)) cls+=' today'; if(state.selectedDay===dateStr) cls+=' selected';
+        if(cnt>=10) cls+=' has-10'; else if(cnt>=6) cls+=' has-6'; else if(cnt>=3) cls+=' has-3'; else if(cnt>=1) cls+=' has-1';
+        cells+=`<button type="button" class="${cls}" data-date="${dateStr}" aria-label="${dayNum}. ${monthName}, заседаний: ${cnt}"><div class="cal-hint"></div><div class="cal-num">${dayNum}</div></button>`;
       }
 
-      return head + `
-        <div class="cal-week">${weekNames.map(w => `<div style="text-align:center;">${w}</div>`).join('')}</div>
-        <div class="cal-grid">${cells}</div>
-      `;
+      return head + `<div class="cal-week">${weekNames.map(w=>`<div style="text-align:center;">${w}</div>`).join('')}</div>
+                     <div class="cal-grid">${cells}</div>`;
     }
 
-    // ===== Основной объект HEARINGS =====
     window.HEARINGS = {
       LS_KEY: 'tl_hearings_v1',
       data: [],
-      state: {
-        query: '',
-        filter: 'all',
-        selectedDay: null,
-        calendar: { year: (new Date()).getFullYear(), month: (new Date()).getMonth() }
-      },
-      editingId: null,
       casesIndex: [],
+      state: { query:'', filter:'all', selectedDay:null, calendar:{ year:(new Date()).getFullYear(), month:(new Date()).getMonth() } },
+      editingId: null,
 
-init() {
-  try {
-    const raw = localStorage.getItem(this.LS_KEY);
-    this.data = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(this.data)) this.data = [];
-  } catch (e) {
-    this.data = [];
-  }
+      refreshCasesIndex(){ this.casesIndex = loadCasesIndex(); },
 
-  // Никаких демо-данных
-  this.autoArchiveStale && this.autoArchiveStale();
-  this.initCaseSuggest && this.initCaseSuggest();
-  this.render();
-},
+      init(){
+        try{ const raw=localStorage.getItem(this.LS_KEY); this.data=raw?JSON.parse(raw):[]; if(!Array.isArray(this.data)) this.data=[]; }catch(e){ this.data=[]; }
+        this.refreshCasesIndex();
+        this.autoArchiveStale();
+        this.initCaseSuggest();
+        this.render();
+      },
 
+      save(){ localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
 
-      save() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
-      setQuery(v) { this.state.query = (v || '').toLowerCase(); this.render(); },
-
-      setFilter(f) {
-        this.state.filter = f;
-        document.querySelectorAll('#hearings-page .chip').forEach(ch => {
-          ch.classList.toggle('active', ch.dataset.filter === f);
-          ch.setAttribute('aria-selected', String(ch.dataset.filter === f));
+      setQuery(v){ this.state.query=(v||'').toLowerCase(); this.render(); },
+      setFilter(f){
+        this.state.filter=f;
+        document.querySelectorAll('#hearings-page .chip').forEach(ch=>{
+          ch.classList.toggle('active', ch.dataset.filter===f);
+          ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
         });
         this.render();
       },
 
-      // Календарь: смена месяца
-      gotoMonth(year, month) {
-        this.state.calendar.year = year;
-        this.state.calendar.month = month; // 0..11
-        this.render();
-      },
-      jumpMonths(delta) {
-        const { year, month } = this.state.calendar;
-        const next = shiftMonth(year, month, delta);
-        this.gotoMonth(next.year, next.month);
-      },
-      gotoTodayMonth() {
-        const d = new Date();
-        this.gotoMonth(d.getFullYear(), d.getMonth());
-      },
+      gotoMonth(year, month){ this.state.calendar.year=year; this.state.calendar.month=month; this.render(); },
+      jumpMonths(delta){ const {year,month}=this.state.calendar; const next=shiftMonth(year,month,delta); this.gotoMonth(next.year,next.month); },
+      gotoTodayMonth(){ const d=new Date(); this.gotoMonth(d.getFullYear(), d.getMonth()); },
 
-      // Сброс выбранной в календаре даты
-      clearSelectedDay() {
-        this.state.selectedDay = null;
-        const chip = document.getElementById('hearings-day-chip');
-        if (chip) chip.hidden = true;
-        this.render();
-      },
+      clearSelectedDay(){ this.state.selectedDay=null; const chip=document.getElementById('hearings-day-chip'); if(chip) chip.hidden=true; this.render(); },
 
-      // Плавное сворачивание/разворачивание
-      toggleForm(force) {
-        const wrap = document.getElementById('hearings-form-wrap');
-        const btn  = document.getElementById('hearings-add-btn');
-        const isOpen = wrap.classList.contains('open');
-        const shouldOpen = (typeof force === 'boolean') ? force : !isOpen;
-        if (shouldOpen === isOpen) return;
-
-        wrap.style.overflow = 'hidden';
-        if (shouldOpen) {
-          wrap.classList.add('open');
-          wrap.style.maxHeight = wrap.scrollHeight + 'px';
-          setExpanded(btn, wrap, true);
+      toggleForm(force){
+        const wrap=document.getElementById('hearings-form-wrap');
+        const btn=document.getElementById('hearings-add-btn');
+        const isOpen=wrap.classList.contains('open');
+        const shouldOpen=(typeof force==='boolean')?force:!isOpen; if(shouldOpen===isOpen) return;
+        wrap.style.overflow='hidden';
+        if(shouldOpen){
+          wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
           document.getElementById('h-case').focus();
         } else {
-          wrap.style.maxHeight = wrap.scrollHeight + 'px';
-          requestAnimationFrame(() => { wrap.style.maxHeight = '0px'; });
-          setExpanded(btn, wrap, false);
-          wrap.addEventListener('transitionend', () => {
-            wrap.classList.remove('open');
-            HEARINGS.cancelEdit();
-          }, { once: true });
+          wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
+          setExpanded(btn,wrap,false);
+          wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); HEARINGS.cancelEdit(); },{once:true});
         }
       },
 
-      // Подсказки по номеру дела
-      initCaseSuggest() {
-        const input = document.getElementById('h-case');
-        const box   = document.getElementById('h-case-suggest');
-        if (!input || !box) return;
-
-        const update = () => this.buildSuggestions(box, input.value);
-        input.addEventListener('input', update);
-        input.addEventListener('focus', update);
-        input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 120));
-
-        box.addEventListener('mousedown', (e) => {
-          const item = e.target.closest('.suggest-item');
-          if (!item) return;
-          const number = item.getAttribute('data-number') || '';
-          const debtor = item.getAttribute('data-debtor') || '';
-          const court  = item.getAttribute('data-court') || '';
-          input.value = number;
-          const d = document.getElementById('h-debtor');
-          const c = document.getElementById('h-court');
-          if (d && !d.value && debtor) d.value = debtor;
-          if (c && !c.value && court)  c.value  = court;
-          box.hidden = true;
-        });
-      },
-
-      buildSuggestions($box, query) {
-        const casesIndex = this.casesIndex || [];
-        const q = (query || '').toLowerCase().trim();
-        let items = [];
-        if (!q) items = casesIndex.slice(0, 7);
-        else items = casesIndex.filter(c => c.number.toLowerCase().includes(q)).slice(0, 7);
-
-        if (!items.length) { $box.hidden = true; $box.innerHTML=''; return; }
-        $box.innerHTML = items.map(c => `
-          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor}" data-court="${c.court}">
-            <span>${c.number}</span>
-            <span class="hint">${c.debtor || ''}</span>
-          </div>
-        `).join('');
-        $box.hidden = false;
-      },
-
-      // Редактирование
-      edit(id) {
-        const item = this.data.find(x => x.id === id);
-        if (!item) return;
-        this.editingId = id;
-
-        document.getElementById('h-case').value  = item.caseNumber || '';
-        document.getElementById('h-debtor').value= item.debtor || '';
-        document.getElementById('h-date').value  = item.date || '';
-        document.getElementById('h-time').value  = item.time || '';
-        document.getElementById('h-court').value = item.court || '';
-        document.getElementById('h-place').value = item.place || '';
-        document.getElementById('h-note').value  = item.note || '';
-        document.getElementById('h-status').value= item.status || 'active';
-        document.getElementById('hearings-submit-btn').textContent = 'Обновить';
-
-        const wrap = document.getElementById('hearings-form-wrap');
-        if (!wrap.classList.contains('open')) this.toggleForm(true);
-        else document.getElementById('h-case').focus();
-      },
-
-      cancelEdit() {
-        this.editingId = null;
-        document.getElementById('hearings-submit-btn').textContent = 'Сохранить';
-        this.clearForm();
-      },
-
-      submit(ev) {
-        ev && ev.preventDefault();
-        const caseNumber = document.getElementById('h-case').value.trim();
-        const debtor     = document.getElementById('h-debtor').value.trim();
-        const date       = document.getElementById('h-date').value;
-        const time       = document.getElementById('h-time').value;
-        const court      = document.getElementById('h-court').value.trim();
-        const place      = document.getElementById('h-place').value.trim();
-        const note       = document.getElementById('h-note').value.trim();
-        const status     = document.getElementById('h-status').value;
-
-        if (!caseNumber || !date) { alert('Заполни обязательные поля: Номер дела и Дата.'); return; }
-
-        if (this.editingId) {
-          const idx = this.data.findIndex(x => x.id === this.editingId);
-          if (idx !== -1) {
-            const prev = this.data[idx];
-            this.data[idx] = { ...prev, caseNumber, debtor, date, time, court, place, note, status, updatedAt: Date.now() };
-          }
-        } else {
-          this.data.push({
-            id: String(Date.now()),
-            caseNumber, debtor, date, time, court, place, note,
-            status: status === 'archived' ? 'archived' : 'active',
-            createdAt: Date.now(),
-            updatedAt: Date.now()
+      // ---- ПОДСКАЗКИ ----
+      initCaseSuggest(){
+        const caseI=document.getElementById('h-case');
+        const caseBox=document.getElementById('h-case-suggest');
+        if(caseI && caseBox){
+          const update=()=>{ this.refreshCasesIndex(); this.buildCaseSuggestions(caseBox, caseI.value); };
+          caseI.addEventListener('input', update);
+          caseI.addEventListener('focus', update);
+          caseI.addEventListener('blur', ()=>setTimeout(()=>{ caseBox.hidden=true; },120));
+          caseBox.addEventListener('mousedown',(e)=>{
+            const item=e.target.closest('.suggest-item'); if(!item) return;
+            caseI.value=item.getAttribute('data-number')||'';
+            const d=document.getElementById('h-debtor'); const c=document.getElementById('h-court');
+            if(d && !d.value) d.value=item.getAttribute('data-debtor')||'';
+            if(c && !c.value) c.value=item.getAttribute('data-court')||'';
+            caseBox.hidden=true;
           });
         }
-
-        this.save();
-        this.cancelEdit();
-        this.toggleForm(false);
-        this.autoArchiveStale(); // на случай прошлых дат
-        this.render();
-      },
-
-      clearForm() {
-        ['h-case','h-debtor','h-date','h-time','h-court','h-place','h-note'].forEach(id => {
-          const el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('h-status').value = 'active';
-      },
-
-      toggleArchive(id) {
-        const item = this.data.find(x => x.id === id); if (!item) return;
-        item.status = item.status === 'active' ? 'archived' : 'active';
-        item.updatedAt = Date.now();
-        this.save(); this.render();
-      },
-
-      remove(id) {
-        if (!confirm('Удалить заседание? Действие необратимо.')) return;
-        this.data = this.data.filter(x => x.id !== id);
-        this.save(); this.render();
-      },
-
-      // Автоархив: >3 дней после даты заседания и запись не менялась после времени заседания
-      autoArchiveStale() {
-        const now = nowTs();
-        let changed = false;
-        this.data.forEach(i => {
-          if (i.status !== 'active') return;
-          const ts = toTs(i.date, i.time);
-          if (isNaN(ts)) return;
-          const threshold = ts + 3*DAY;
-          const upd = i.updatedAt || i.createdAt || 0;
-          if (now >= threshold && upd < ts) {
-            i.status = 'archived';
-            changed = true;
-          }
-        });
-        if (changed) this.save();
-      },
-
-      isUpcoming(item) {
-        const ts = toTs(item.date, item.time);
-        return !isNaN(ts) && ts >= nowTs();
-      },
-
-      // Подсчёт количества заседаний на каждую дату (для календаря)
-      buildCountsForCalendar() {
-        const counts = {};
-        const ref = new Date(this.state.calendar.year, this.state.calendar.month, 1);
-        const { y, m, daysInMonth } = monthInfo(ref);
-
-        for (let d=1; d<=daysInMonth; d++) {
-          counts[ymDate(y,m,d)] = 0;
+        const debI=document.getElementById('h-debtor');
+        const debBox=document.getElementById('h-debtor-suggest');
+        if(debI && debBox){
+          const updateD=()=>{ this.refreshCasesIndex(); this.buildDebtorSuggestions(debBox, debI.value); };
+          debI.addEventListener('input', updateD);
+          debI.addEventListener('focus', updateD);
+          debI.addEventListener('blur', ()=>setTimeout(()=>{ debBox.hidden=true; },120));
+          debBox.addEventListener('mousedown',(e)=>{
+            const item=e.target.closest('.suggest-item'); if(!item) return;
+            debI.value=item.getAttribute('data-debtor')||'';
+            const cI=document.getElementById('h-case'); const courtI=document.getElementById('h-court');
+            if(cI && !cI.value) cI.value=item.getAttribute('data-number')||'';
+            if(courtI && !courtI.value) courtI.value=item.getAttribute('data-court')||'';
+            debBox.hidden=true;
+          });
         }
-        this.data.forEach(i => {
-          if (i.status === 'archived') return; // в календарь не считаем архив
-          if (!i.date) return;
-          const dstr = i.date;
-          if (counts.hasOwnProperty(dstr)) counts[dstr] += 1;
+      },
+      buildCaseSuggestions($box, query){
+        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
+        let items=!q?list.slice(0,7):list.filter(c=>c.number.toLowerCase().includes(q)).slice(0,7);
+        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
+        $box.innerHTML=items.map(c=>`
+          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}" data-court="${c.court||''}">
+            <span>${c.number}</span><span class="hint">${c.debtor||''}</span>
+          </div>`).join('');
+        $box.hidden=false;
+      },
+      buildDebtorSuggestions($box, query){
+        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
+        let items=!q?list.slice(0,7):list.filter(c=>(c.debtor||'').toLowerCase().includes(q)).slice(0,7);
+        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
+        $box.innerHTML=items.map(c=>`
+          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}" data-court="${c.court||''}">
+            <span>${c.debtor||''}</span><span class="hint">${c.number}</span>
+          </div>`).join('');
+        $box.hidden=false;
+      },
+
+      // ---- CRUD ----
+      edit(id){
+        const i=this.data.find(x=>x.id===id); if(!i) return;
+        this.editingId=id;
+        ['h-case','h-debtor','h-date','h-time','h-court','h-place','h-note'].forEach((key,idx)=>{
+          const map={ 'h-case':i.caseNumber||'', 'h-debtor':i.debtor||'', 'h-date':i.date||'', 'h-time':i.time||'',
+                      'h-court':i.court||'', 'h-place':i.place||'', 'h-note':i.note||'' };
+          const el=document.getElementById(key); if(el) el.value=map[key];
         });
+        document.getElementById('h-status').value=i.status||'active';
+        document.getElementById('hearings-submit-btn').textContent='Обновить';
+        const wrap=document.getElementById('hearings-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
+      },
+      cancelEdit(){ this.editingId=null; document.getElementById('hearings-submit-btn').textContent='Сохранить';
+        ['h-case','h-debtor','h-date','h-time','h-court','h-place','h-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('h-status').value='active';
+      },
+      submit(ev){
+        ev.preventDefault();
+        const caseNumber=document.getElementById('h-case').value.trim();
+        const debtor=document.getElementById('h-debtor').value.trim();
+        const date=document.getElementById('h-date').value;
+        const time=document.getElementById('h-time').value;
+        const court=document.getElementById('h-court').value.trim();
+        const place=document.getElementById('h-place').value.trim();
+        const note=document.getElementById('h-note').value.trim();
+        const status=document.getElementById('h-status').value;
+        if(!caseNumber || !date){ alert('Заполни поля: Номер дела и Дата.'); return; }
+
+        if(this.editingId){
+          const i=this.data.findIndex(x=>x.id===this.editingId);
+          if(i!==-1) this.data[i]={...this.data[i], caseNumber, debtor, date, time, court, place, note, status, updatedAt:Date.now()};
+        } else {
+          this.data.push({ id:String(Date.now()), caseNumber, debtor, date, time, court, place, note,
+            status: status==='archived'?'archived':'active', createdAt:Date.now(), updatedAt:Date.now() });
+        }
+        this.save();
+        this.cancelEdit(); this.toggleForm(false); this.autoArchiveStale(); this.render();
+      },
+      toggleArchive(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status=it.status==='active'?'archived':'active'; it.updatedAt=Date.now(); this.save(); this.render(); },
+      remove(id){ if(!confirm('Удалить заседание?')) return; this.data=this.data.filter(x=>x.id!==id); this.save(); this.render(); },
+
+      // Автоархив через 3 дня после даты, если запись не обновляли после самого заседания
+      autoArchiveStale(){
+        const now=nowTs(); let dirty=false;
+        this.data.forEach(i=>{
+          if(i.status!=='active') return;
+          const ts=toTs(i.date,i.time); if(isNaN(ts)) return;
+          const threshold=ts + 3*DAY; const upd=i.updatedAt||i.createdAt||0;
+          if(now>=threshold && upd<ts){ i.status='archived'; dirty=true; }
+        });
+        if(dirty) this.save();
+      },
+
+      // ---- Рендер ----
+      isUpcoming(i){ const ts=toTs(i.date,i.time); return !isNaN(ts) && ts>=nowTs(); },
+      buildCountsForCalendar(){
+        const counts={}; const ref=new Date(this.state.calendar.year,this.state.calendar.month,1);
+        const {y,m,daysInMonth}=monthInfo(ref);
+        for(let d=1; d<=daysInMonth; d++) counts[ymDate(y,m,d)]=0;
+        this.data.forEach(i=>{ if(i.status==='archived'||!i.date) return; const d=i.date; if(counts.hasOwnProperty(d)) counts[d]+=1; });
         return counts;
       },
-
-      // Рендер календаря и установка обработчиков
-      renderCalendar() {
-        const cal = document.getElementById('hearings-calendar');
-        if (!cal) return;
-        const counts = this.buildCountsForCalendar();
-        cal.innerHTML = buildCalendarHTML(this.state, counts);
-
-        // Навигация месяцами
-        const prev = cal.querySelector('[data-cal-prev]');
-        const next = cal.querySelector('[data-cal-next]');
-        const today= cal.querySelector('[data-cal-today]');
-        prev && prev.addEventListener('click', () => this.jumpMonths(-1));
-        next && next.addEventListener('click', () => this.jumpMonths(+1));
-        today && today.addEventListener('click', () => this.gotoTodayMonth());
-
-        cal.querySelectorAll('[data-cal-jump]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const val = btn.getAttribute('data-cal-jump') || '+1';
-            const n = parseInt(val.replace('+',''), 10);
-            if (!isNaN(n)) this.jumpMonths(n);
-          });
-        });
-
-        // Клики по дням
-        cal.querySelectorAll('.cal-day[data-date]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const date = btn.getAttribute('data-date');
-            this.state.selectedDay = date;
-            const chip = document.getElementById('hearings-day-chip');
-            const label = document.getElementById('hearings-day-label');
-            if (chip && label) {
-              label.textContent = fmtDayLabel(date);
-              chip.hidden = false;
-            }
-            this.render(); // перерисуем список и сам календарь (выделение)
-          });
-        });
+      renderCalendar(){
+        const cal=document.getElementById('hearings-calendar'); if(!cal) return;
+        const counts=this.buildCountsForCalendar(); cal.innerHTML=buildCalendarHTML(this.state, counts);
+        const prev=cal.querySelector('[data-cal-prev]'); const next=cal.querySelector('[data-cal-next]'); const today=cal.querySelector('[data-cal-today]');
+        prev&&prev.addEventListener('click',()=>this.jumpMonths(-1)); next&&next.addEventListener('click',()=>this.jumpMonths(+1)); today&&today.addEventListener('click',()=>this.gotoTodayMonth());
+        cal.querySelectorAll('[data-cal-jump]').forEach(b=>b.addEventListener('click',()=>{ const n=parseInt((b.getAttribute('data-cal-jump')||'+1').replace('+',''),10); if(!isNaN(n)) this.jumpMonths(n); }));
+        cal.querySelectorAll('.cal-day[data-date]').forEach(btn=>btn.addEventListener('click',()=>{
+          const date=btn.getAttribute('data-date'); this.state.selectedDay=date;
+          const chip=document.getElementById('hearings-day-chip'); const label=document.getElementById('hearings-day-label');
+          if(chip && label){ label.textContent=fmtDayLabel(date); chip.hidden=false; }
+          this.render();
+        }));
       },
 
-      render() {
-        const list = document.getElementById('hearings-list');
-        const empty = document.getElementById('hearings-empty');
+      render(){
+        const list=document.getElementById('hearings-list'); const empty=document.getElementById('hearings-empty');
+        let items=this.data.slice(); const q=this.state.query;
 
-        let items = this.data.slice();
-        const q = this.state.query;
-
-        if (q) {
-          items = items.filter(i =>
-            i.caseNumber.toLowerCase().includes(q) ||
-            (i.debtor || '').toLowerCase().includes(q) ||
-            (i.court || '').toLowerCase().includes(q) ||
-            (i.place || '').toLowerCase().includes(q) ||
-            (i.note || '').toLowerCase().includes(q) ||
-            (i.date || '').includes(q) || (i.time || '').includes(q)
+        if(q){
+          items=items.filter(i =>
+            (i.caseNumber||'').toLowerCase().includes(q) ||
+            (i.debtor||'').toLowerCase().includes(q) ||
+            (i.court||'').toLowerCase().includes(q) ||
+            (i.place||'').toLowerCase().includes(q) ||
+            (i.note||'').toLowerCase().includes(q) ||
+            (i.date||'').includes(q) || (i.time||'').includes(q)
           );
         }
+        if(this.state.selectedDay){ items=items.filter(i => (i.date||'')===this.state.selectedDay); }
+        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
+        else if(this.state.filter==='upcoming') items=items.filter(i=>i.status!=='archived'&&this.isUpcoming(i));
+        else if(this.state.filter==='past') items=items.filter(i=>i.status!=='archived'&&!this.isUpcoming(i));
 
-        // Фильтр по выбранной дате (если нажали день в календаре)
-        if (this.state.selectedDay) {
-          items = items.filter(i => (i.date || '') === this.state.selectedDay);
-        }
-
-        // Чип-фильтры статуса/времени
-        if (this.state.filter === 'archived') {
-          items = items.filter(i => i.status === 'archived');
-        } else if (this.state.filter === 'upcoming') {
-          items = items.filter(i => i.status !== 'archived' && this.isUpcoming(i));
-        } else if (this.state.filter === 'past') {
-          items = items.filter(i => i.status !== 'archived' && !this.isUpcoming(i));
-        }
-
-        // Сортировка
-        const now = nowTs();
-        items.sort((a,b) => {
-          const at = toTs(a.date, a.time), bt = toTs(b.date, b.time);
-          const aFuture = !isNaN(at) && at >= now;
-          const bFuture = !isNaN(bt) && bt >= now;
-          if (this.state.filter === 'upcoming') return at - bt;
-          if (this.state.filter === 'past')     return bt - at;
-          if (aFuture !== bFuture) return aFuture ? -1 : 1;
-          return aFuture ? (at - bt) : (bt - at);
+        const now=nowTs();
+        items.sort((a,b)=>{ const at=toTs(a.date,a.time), bt=toTs(b.date,b.time); const aF=!isNaN(at)&&at>=now, bF=!isNaN(bt)&&bt>=now;
+          if(this.state.filter==='upcoming') return at-bt;
+          if(this.state.filter==='past') return bt-at;
+          if(aF!==bF) return aF?-1:1;
+          return aF?(at-bt):(bt-at);
         });
 
-        if (!items.length) { list.innerHTML = ''; empty.hidden = false; this.renderCalendar(); window.adjustBottomSpacer && window.adjustBottomSpacer(); return; }
-        empty.hidden = true;
+        if(!items.length){ list.innerHTML=''; empty.hidden=false; this.renderCalendar(); window.adjustBottomSpacer&&window.adjustBottomSpacer(); return; }
+        empty.hidden=true;
 
-        list.innerHTML = items.map(i => {
-          const ts = toTs(i.date, i.time);
-          const upcoming = !isNaN(ts) && ts >= now;
-          const dt = `${fmtDate(i.date)} ${i.time ? i.time : ''}`.trim();
-          const today = isSameDay(i.date);
+        list.innerHTML=items.map(i=>{
+          const ts=toTs(i.date,i.time); const upcoming=!isNaN(ts)&&ts>=now; const dt=`${fmtDate(i.date)} ${i.time?i.time:''}`.trim(); const today=isSameDay(i.date);
           return `
-            <article class="case-card ${today ? 'today' : ''}" role="listitem" data-id="${i.id}">
+            <article class="case-card ${today?'today':''}" role="listitem" data-id="${i.id}">
               <div class="case-head">
-                <div class="case-number">${i.caseNumber}${today ? '<span class="pill today-pill">Сегодня</span>' : ''}</div>
-                <div class="badge ${i.status === 'active' ? 'active' : ''}">
-                  ${i.status === 'active' ? (upcoming ? 'Предстоящие' : 'Прошедшие') : 'Архив'}
-                </div>
+                <div class="case-number">${i.caseNumber}${today?'<span class="pill today-pill">Сегодня</span>':''}</div>
+                <div class="badge ${i.status==='active'?'active':''}">${i.status==='active'?(upcoming?'Предстоящие':'Прошедшие'):'Архив'}</div>
               </div>
               <div class="case-row">
-                <span><strong>Дата/время:</strong> ${dt || '—'}</span>
-                ${i.debtor ? `<span><strong>Должник:</strong> ${i.debtor}</span>` : ''}
-                ${i.court ? `<span><strong>Суд:</strong> ${i.court}</span>` : ''}
-                ${i.place ? `<span><strong>Зал/адрес:</strong> ${i.place}</span>` : ''}
+                <span><strong>Дата/время:</strong> ${dt||'—'}</span>
+                ${i.debtor?`<span><strong>Должник:</strong> ${i.debtor}</span>`:''}
+                ${i.court?`<span><strong>Суд:</strong> ${i.court}</span>`:''}
+                ${i.place?`<span><strong>Зал/адрес:</strong> ${i.place}</span>`:''}
               </div>
-              ${i.note ? `<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>` : ''}
+              ${i.note?`<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>`:''}
               <div class="case-actions">
-                <button class="ghost" onclick="HEARINGS && HEARINGS.toggleArchive('${i.id}')">
-                  ${i.status === 'active' ? 'Архивировать' : 'Вернуть в активные'}
-                </button>
+                <button class="ghost" onclick="HEARINGS && HEARINGS.toggleArchive('${i.id}')">${i.status==='active'?'Архивировать':'Вернуть в активные'}</button>
                 <button class="ghost" onclick="HEARINGS && HEARINGS.edit('${i.id}')">Редактировать</button>
                 <button class="ghost" onclick="HEARINGS && HEARINGS.remove('${i.id}')">Удалить</button>
               </div>
@@ -692,20 +466,15 @@ init() {
           `;
         }).join('');
 
-        // Перерисовать календарь (выделения и интенсивность)
         this.renderCalendar();
-
-        // Пересчитать нижний спейсер, чтобы карточки не прятались под таббар
         window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
 
-    // Автоинициализация
     window.HEARINGS.init();
   })();
   </script>
 
-  <!-- Триггер запуска логики выше -->
   <img alt="" aria-hidden="true" style="display:none"
        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
        onload='(function(){var s=document.getElementById("hearings-inline-js"); if(s){ new Function(s.textContent)(); }})();' />
