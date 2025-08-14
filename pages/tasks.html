@@ -35,7 +35,7 @@
           <input type="text" id="t-combo" placeholder="А40-12345/2025 или Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
           <div id="t-combo-suggest" class="suggest" role="listbox" hidden></div>
 
-          <!-- скрытые «старые» поля -->
+          <!-- скрытые поля -->
           <input type="hidden" id="t-case" />
           <input type="hidden" id="t-debtor" />
         </label>
@@ -62,6 +62,15 @@
         <button type="submit" class="primary" id="tasks-submit-btn">Сохранить</button>
       </div>
     </form>
+  </div>
+
+  <!-- Календарь задач (как в hearings) -->
+  <div id="tasks-calendar" class="cal" aria-label="Календарь задач (месяц)"></div>
+
+  <!-- Плашка выбранной даты -->
+  <div id="tasks-day-chip" class="day-chip" hidden>
+    <span id="tasks-day-label"></span>
+    <button class="ghost small" onclick="TASKS && TASKS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
   </div>
 
   <!-- Список -->
@@ -112,6 +121,29 @@
     .suggest-item:hover, .suggest-item[aria-selected="true"]{ background:var(--tg-theme-secondary-bg-color); }
     .suggest-item .hint{ color:var(--tg-theme-hint-color); font-size:12px; }
 
+    /* Календарь — как в hearings */
+    .cal{ border:1px solid var(--separator); border-radius:16px; background:var(--tg-theme-secondary-bg-color); padding:10px; display:grid; gap:8px; margin-top:8px; }
+    .cal-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .cal-title{ font-weight:700; }
+    .cal-nav{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .cal-nav .navbtn,.cal-nav .ghost.small{ padding:6px 10px; border-radius:10px; border:1px solid var(--separator); background:transparent; cursor:pointer; color:var(--tg-theme-text-color); }
+    .cal-nav .navbtn:hover,.cal-nav .ghost.small:hover{ border-color:var(--app-accent); color:var(--app-accent); }
+    .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; color:var(--tg-theme-hint-color); font-size:12px; }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-day{ position:relative; padding:10px 0; text-align:center; border-radius:10px; cursor:pointer; user-select:none; background:var(--tg-theme-bg-color); border:1px solid transparent; }
+    .cal-day.disabled{ opacity:.4; cursor:default; }
+    .cal-day.today{ outline:1px dashed var(--app-accent); }
+    .cal-day.selected{ border-color:var(--app-accent); box-shadow:0 0 0 1px var(--app-accent) inset; }
+    .cal-num{ font-weight:600; }
+    .cal-hint{ position:absolute; inset:2px; border-radius:8px; pointer-events:none; opacity:0; }
+    .cal-day.has-1{ border-color:var(--app-accent); }
+    .cal-day.has-3 .cal-hint{ background:var(--app-accent); opacity:.12; }
+    .cal-day.has-6 .cal-hint{ background:var(--app-accent); opacity:.22; }
+    .cal-day.has-10 .cal-hint{ background:var(--app-accent); opacity:.32; }
+
+    .day-chip{ display:flex; align-items:center; gap:8px; margin:6px 0 2px; color:var(--tg-theme-hint-color); }
+    .day-chip .small{ padding:6px 10px; border-radius:10px; }
+
     .cases-list{ display:grid; gap:8px; margin-top:8px; }
     .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
       border-radius:16px; padding:12px; display:grid; gap:6px; }
@@ -137,6 +169,11 @@
     const nowTs=()=>Date.now();
     function toTs(dt){ if(!dt) return NaN; const ts=Date.parse(dt); return isNaN(ts)?NaN:ts; }
     function fmtDateTime(dt){ try{ const d=new Date(dt); return d.toLocaleString('ru-RU'); }catch(_){ return '—'; } }
+    function fmtDayLabel(s){ try{ const d=new Date(s); return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(_){return s;} }
+    function pad2(n){return n<10?'0'+n:''+n;}
+    function monthInfo(date){ const y=date.getFullYear(), m=date.getMonth(); const first=new Date(y,m,1), last=new Date(y,m+1,0); const dow=(first.getDay()+6)%7; return {y,m,daysInMonth:last.getDate(),startOffset:dow}; }
+    function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
+    function fmtMonthTitle(date){ return date.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}); }
 
     function loadCasesIndex(){
       try{
@@ -156,11 +193,50 @@
       return { number, debtor };
     }
 
+    function buildCalendarHTML(state, counts){
+      const ref=new Date(state.calendar.year, state.calendar.month, 1);
+      const {y,m,daysInMonth,startOffset}=monthInfo(ref);
+      const monthName=fmtMonthTitle(ref);
+      const weekNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+      const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
+
+      let head = `
+        <div class="cal-head">
+          <div class="cal-title">${monthName[0].toUpperCase()+monthName.slice(1)}</div>
+          <div class="cal-nav">
+            <button type="button" class="navbtn" data-cal-prev>‹</button>
+            <button type="button" class="navbtn" data-cal-next>›</button>
+            <button type="button" class="ghost small" data-cal-today>Сегодня</button>
+            <button type="button" class="ghost small" data-cal-jump="+1">+1м</button>
+            <button type="button" class="ghost small" data-cal-jump="+3">+3м</button>
+            <button type="button" class="ghost small" data-cal-jump="+6">+6м</button>
+          </div>
+        </div>
+      `;
+
+      let cells='';
+      for(let i=0;i<totalCells;i++){
+        const dayNum=i-startOffset+1;
+        if(dayNum<1||dayNum>daysInMonth){ cells+=`<div class="cal-day disabled" aria-hidden="true"></div>`; continue; }
+        const dateStr=ymDate(y,m,dayNum);
+        const cnt=counts[dateStr]||0;
+        let cls='cal-day';
+        const today=(function(d){ const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate(); })(new Date(dateStr));
+        if(today) cls+=' today';
+        if(state.selectedDay===dateStr) cls+=' selected';
+        if(cnt>=10) cls+=' has-10'; else if(cnt>=6) cls+=' has-6'; else if(cnt>=3) cls+=' has-3'; else if(cnt>=1) cls+=' has-1';
+        cells+=`<button type="button" class="${cls}" data-date="${dateStr}" aria-label="${dayNum}. ${monthName}, задач: ${cnt}"><div class="cal-hint"></div><div class="cal-num">${dayNum}</div></button>`;
+      }
+
+      return head + `<div class="cal-week">${weekNames.map(w=>`<div style="text-align:center;">${w}</div>`).join('')}</div>
+                     <div class="cal-grid">${cells}</div>`;
+    }
+
     window.TASKS = {
       LS_KEY:'tl_tasks_v1',
       data:[],
       casesIndex:[],
-      state:{ query:'', filter:'all' },
+      state:{ query:'', filter:'all', selectedDay:null, calendar:{ year:(new Date()).getFullYear(), month:(new Date()).getMonth() } },
       editingId:null,
 
       refreshCasesIndex(){ this.casesIndex=loadCasesIndex(); },
@@ -182,6 +258,47 @@
           ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
         });
         this.render();
+      },
+
+      /* === Календарь === */
+      jumpMonths(delta){
+        const d=new Date(this.state.calendar.year,this.state.calendar.month,1); d.setMonth(d.getMonth()+delta);
+        this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render();
+      },
+      gotoTodayMonth(){ const d=new Date(); this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render(); },
+      clearSelectedDay(){
+        this.state.selectedDay=null;
+        const chip=document.getElementById('tasks-day-chip');
+        const label=document.getElementById('tasks-day-label');
+        if(label) label.textContent='';
+        if(chip) chip.hidden=true;
+        this.render();
+      },
+      buildCountsForCalendar(){
+        const counts={}; const d=new Date(this.state.calendar.year,this.state.calendar.month,1);
+        const y=d.getFullYear(), m=d.getMonth(); const last=new Date(y,m+1,0); const daysInMonth=last.getDate();
+        for(let day=1; day<=daysInMonth; day++){ counts[ymDate(y,m,day)]=0; }
+        this.data.forEach(t=>{
+          if(t.status==='archived' || !t.due) return;
+          const datePart = t.due.slice(0,10); // YYYY-MM-DD
+          if(Object.hasOwn(counts, datePart)) counts[datePart]+=1;
+        });
+        return counts;
+      },
+      renderCalendar(){
+        const cal=document.getElementById('tasks-calendar'); if(!cal) return;
+        const counts=this.buildCountsForCalendar(); cal.innerHTML=buildCalendarHTML(this.state, counts);
+        cal.querySelector('[data-cal-prev]')?.addEventListener('click',()=>this.jumpMonths(-1));
+        cal.querySelector('[data-cal-next]')?.addEventListener('click',()=>this.jumpMonths(+1));
+        cal.querySelector('[data-cal-today]')?.addEventListener('click',()=>this.gotoTodayMonth());
+        cal.querySelectorAll('[data-cal-jump]').forEach(b=>b.addEventListener('click',()=>{ const n=parseInt((b.getAttribute('data-cal-jump')||'+1').replace('+',''),10); if(!isNaN(n)) this.jumpMonths(n); }));
+        cal.querySelectorAll('.cal-day[data-date]').forEach(btn=>btn.addEventListener('click',()=>{
+          const date=btn.getAttribute('data-date');
+          this.state.selectedDay=date;
+          const chip=document.getElementById('tasks-day-chip'); const label=document.getElementById('tasks-day-label');
+          if(chip && label){ label.textContent=fmtDayLabel(date); chip.hidden=false; }
+          this.render();
+        }));
       },
 
       toggleForm(force){
@@ -303,6 +420,11 @@
           );
         }
 
+        // фильтр по выбранному дню календаря
+        if(this.state.selectedDay){
+          items = items.filter(i => (i.due||'').slice(0,10) === this.state.selectedDay);
+        }
+
         // ❗ Архив скрыт по умолчанию + пресеты
         if (this.state.filter === 'archived') {
           items = items.filter(i => i.status === 'archived');
@@ -316,7 +438,11 @@
 
         items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (this.isOverdue(b)-this.isOverdue(a)) || (toTs(a.due)-toTs(b.due)));
 
-        if(!items.length){ list.innerHTML=''; empty.hidden=false; window.adjustBottomSpacer&&window.adjustBottomSpacer(); return; }
+        if(!items.length){
+          list.innerHTML=''; empty.hidden=false; this.renderCalendar();
+          const chip=document.getElementById('tasks-day-chip'); if(chip) chip.hidden = !this.state.selectedDay;
+          window.adjustBottomSpacer&&window.adjustBottomSpacer(); return;
+        }
         empty.hidden=true;
 
         list.innerHTML=items.map(i=>{
@@ -343,6 +469,8 @@
           `;
         }).join('');
 
+        this.renderCalendar();
+        const chip=document.getElementById('tasks-day-chip'); if(chip) chip.hidden = !this.state.selectedDay;
         window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
