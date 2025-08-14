@@ -28,16 +28,18 @@
           <span>Название *</span>
           <input type="text" id="t-title" required placeholder="Например: Подготовить отзыв" />
         </label>
-        <label class="has-suggest">
-          <span>Номер дела</span>
-          <input type="text" id="t-case" placeholder="А40-12345/2025" autocomplete="off" />
-          <div id="t-case-suggest" class="suggest" role="listbox" hidden></div>
+
+        <!-- Комбинированная строка -->
+        <label class="has-suggest" style="grid-column: 1 / -1;">
+          <span>Дело (номер или должник)</span>
+          <input type="text" id="t-combo" placeholder="А40-12345/2025 или Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
+          <div id="t-combo-suggest" class="suggest" role="listbox" hidden></div>
+
+          <!-- скрытые «старые» поля -->
+          <input type="hidden" id="t-case" />
+          <input type="hidden" id="t-debtor" />
         </label>
-        <label class="has-suggest">
-          <span>Должник</span>
-          <input type="text" id="t-debtor" placeholder="Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
-          <div id="t-debtor-suggest" class="suggest" role="listbox" hidden></div>
-        </label>
+
         <label>
           <span>Срок</span>
           <input type="datetime-local" id="t-due" />
@@ -70,7 +72,7 @@
   <div id="tasks-empty" class="cases-empty" hidden>
     <div class="emoji" aria-hidden="true">📝</div>
     <div class="title">Пока нет задач</div>
-    <div class="hint">Добавь первую задачу: название обязательно, остальное по желанию.</div>
+    <div class="hint">Добавь первую задачу: название обязательно.</div>
     <button class="primary" onclick="TASKS && TASKS.toggleForm(true)">Добавить задачу</button>
   </div>
 
@@ -131,7 +133,6 @@
   <script type="text/plain" id="tasks-inline-js">
   (function(){
     const DAY=24*60*60*1000;
-
     function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
     const nowTs=()=>Date.now();
     function toTs(dt){ if(!dt) return NaN; const ts=Date.parse(dt); return isNaN(ts)?NaN:ts; }
@@ -141,10 +142,18 @@
       try{
         const raw=localStorage.getItem('tl_cases_v1'); if(!raw) return [];
         const arr=JSON.parse(raw)||[]; const map=new Map();
-        arr.forEach(c=>{ if(!c||!c.number) return; const key=String(c.number).trim();
-          if(!map.has(key)) map.set(key,{number:key, debtor:c.debtor||''}); });
+        arr.forEach(c=>{ if(!c||!c.number) return; const key=String(c.number).trim(); if(!map.has(key)) map.set(key,{number:key, debtor:c.debtor||''}); });
         return Array.from(map.values());
       }catch(_){ return []; }
+    }
+    function parseComboToFields(text){
+      const s=(text||'').trim();
+      const caseRe = /[AА]\s*\d{1,3}[-–]\d{3,7}\/\d{2,4}/i;
+      const m = s.match(caseRe);
+      const number = m ? m[0].replace(/\s+/g,'').toUpperCase().replace('A','А') : '';
+      let debtor = s;
+      if (m) debtor = (s.slice(0, m.index) + s.slice(m.index + m[0].length)).replace(/[–—-]/g,' ').trim();
+      return { number, debtor };
     }
 
     window.TASKS = {
@@ -160,7 +169,7 @@
         try{ const raw=localStorage.getItem(this.LS_KEY); this.data=raw?JSON.parse(raw):[]; if(!Array.isArray(this.data)) this.data=[]; }catch(e){ this.data=[]; }
         this.refreshCasesIndex();
         this.autoArchiveCompleted();
-        this.initCaseSuggest();
+        this.initComboSuggest();
         this.render();
       },
 
@@ -179,54 +188,45 @@
         const wrap=document.getElementById('tasks-form-wrap'); const btn=document.getElementById('tasks-add-btn');
         const isOpen=wrap.classList.contains('open'); const shouldOpen=(typeof force==='boolean')?force:!isOpen; if(shouldOpen===isOpen) return;
         wrap.style.overflow='hidden';
-        if(shouldOpen){ wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true); document.getElementById('t-title').focus(); }
-        else{ wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; }); setExpanded(btn,wrap,false); wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); TASKS.cancelEdit(); },{once:true}); }
+        if(shouldOpen){
+          wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
+          document.getElementById('t-title').focus(); // фокус на названии, подсказки не открываем
+        } else {
+          wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
+          setExpanded(btn,wrap,false);
+          wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); TASKS.cancelEdit(); },{once:true});
+        }
       },
 
-      // Подсказки
-      initCaseSuggest(){
-        const cI=document.getElementById('t-case'), cBox=document.getElementById('t-case-suggest');
-        if(cI && cBox){
-          const update=()=>{ this.refreshCasesIndex(); this.buildCaseSuggestions(cBox, cI.value); };
-          cI.addEventListener('input', update); cI.addEventListener('focus', update);
-          cI.addEventListener('blur', ()=>setTimeout(()=>{ cBox.hidden=true; },120));
-          cBox.addEventListener('mousedown',(e)=>{
-            const item=e.target.closest('.suggest-item'); if(!item) return;
-            cI.value=item.getAttribute('data-number')||'';
-            const d=document.getElementById('t-debtor'); if(d && !d.value) d.value=item.getAttribute('data-debtor')||'';
-            cBox.hidden=true;
-          });
-        }
-        const dI=document.getElementById('t-debtor'), dBox=document.getElementById('t-debtor-suggest');
-        if(dI && dBox){
-          const updateD=()=>{ this.refreshCasesIndex(); this.buildDebtorSuggestions(dBox, dI.value); };
-          dI.addEventListener('input', updateD); dI.addEventListener('focus', updateD);
-          dI.addEventListener('blur', ()=>setTimeout(()=>{ dBox.hidden=true; },120));
-          dBox.addEventListener('mousedown',(e)=>{
-            const item=e.target.closest('.suggest-item'); if(!item) return;
-            dI.value=item.getAttribute('data-debtor')||'';
-            const c=document.getElementById('t-case'); if(c && !c.value) c.value=item.getAttribute('data-number')||'';
-            dBox.hidden=true;
-          });
-        }
+      /* === КОМБО-ПОДСКАЗКИ === */
+      initComboSuggest(){
+        const input = document.getElementById('t-combo');
+        const box   = document.getElementById('t-combo-suggest');
+        if(!input || !box) return;
+
+        const openWith = (q)=>{ this.refreshCasesIndex(); this.buildComboSuggestions(box, q); };
+        input.addEventListener('click', ()=>openWith(input.value)); // только клик
+        input.addEventListener('input', ()=>openWith(input.value)); // и/или печать
+        input.addEventListener('blur', ()=>setTimeout(()=>{ box.hidden=true; },120));
+
+        box.addEventListener('mousedown', (e)=>{
+          const item = e.target.closest('.suggest-item'); if(!item) return;
+          const number = item.getAttribute('data-number')||'';
+          const debtor = item.getAttribute('data-debtor')||'';
+          document.getElementById('t-case').value   = number;
+          document.getElementById('t-debtor').value = debtor;
+          input.value = number + (debtor ? ' — ' + debtor : '');
+          box.hidden = true;
+        });
       },
-      buildCaseSuggestions($box, query){
+      buildComboSuggestions($box, query){
         const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
-        let items=!q?list.slice(0,7):list.filter(c=>c.number.toLowerCase().includes(q)).slice(0,7);
+        let items=!q?list.slice(0,7):list.filter(c=> c.number.toLowerCase().includes(q) || (c.debtor||'').toLowerCase().includes(q) ).slice(0,7);
         if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
         $box.innerHTML=items.map(c=>`
           <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}">
-            <span>${c.number}</span><span class="hint">${c.debtor||''}</span>
-          </div>`).join('');
-        $box.hidden=false;
-      },
-      buildDebtorSuggestions($box, query){
-        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
-        let items=!q?list.slice(0,7):list.filter(c=>(c.debtor||'').toLowerCase().includes(q)).slice(0,7);
-        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
-        $box.innerHTML=items.map(c=>`
-          <div class="suggest-item" role="option" data-number="${c.number}" data-debtor="${c.debtor||''}">
-            <span>${c.debtor||''}</span><span class="hint">${c.number}</span>
+            <span><strong>${c.number}</strong></span>
+            <span class="hint">${c.debtor||''}</span>
           </div>`).join('');
         $box.hidden=false;
       },
@@ -234,21 +234,33 @@
       // CRUD
       edit(id){
         const i=this.data.find(x=>x.id===id); if(!i) return; this.editingId=id;
-        document.getElementById('t-title').value=i.title||''; document.getElementById('t-case').value=i.caseNumber||'';
-        document.getElementById('t-debtor').value=i.debtor||''; document.getElementById('t-due').value=i.due||'';
-        document.getElementById('t-note').value=i.note||''; document.getElementById('t-status').value=i.status||'active';
+        document.getElementById('t-title').value=i.title||'';
+        document.getElementById('t-case').value=i.caseNumber||'';
+        document.getElementById('t-debtor').value=i.debtor||'';
+        document.getElementById('t-combo').value=(i.caseNumber||'')+(i.debtor?(' — '+i.debtor):'');
+        document.getElementById('t-due').value=i.due||'';
+        document.getElementById('t-note').value=i.note||'';
+        document.getElementById('t-status').value=i.status||'active';
         document.getElementById('tasks-submit-btn').textContent='Обновить';
         const wrap=document.getElementById('tasks-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
       },
       cancelEdit(){ this.editingId=null; document.getElementById('tasks-submit-btn').textContent='Сохранить';
-        ['t-title','t-case','t-debtor','t-due','t-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        ['t-title','t-combo','t-case','t-debtor','t-due','t-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
         document.getElementById('t-status').value='active';
       },
       submit(ev){
         ev.preventDefault();
         const title=document.getElementById('t-title').value.trim();
-        const caseNumber=document.getElementById('t-case').value.trim();
-        const debtor=document.getElementById('t-debtor').value.trim();
+        let caseNumber=document.getElementById('t-case').value;
+        let debtor=document.getElementById('t-debtor').value;
+        const combo=document.getElementById('t-combo').value;
+        if(!caseNumber && combo){
+          const parsed=parseComboToFields(combo);
+          caseNumber=parsed.number;
+          debtor = debtor || parsed.debtor;
+          document.getElementById('t-case').value=caseNumber;
+          document.getElementById('t-debtor').value=debtor;
+        }
         const due=document.getElementById('t-due').value;
         const note=document.getElementById('t-note').value.trim();
         const status=document.getElementById('t-status').value;
@@ -267,12 +279,9 @@
       toggleArchive(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status=it.status==='archived'?'active':'archived'; it.updatedAt=Date.now(); this.save(); this.render(); },
       remove(id){ if(!confirm('Удалить задачу?')) return; this.data=this.data.filter(x=>x.id!==id); this.save(); this.render(); },
 
-      // автоархив «выполнено» спустя 1 день
-      autoArchiveCompleted(){
-        const now=nowTs(); let dirty=false;
+      autoArchiveCompleted(){ const now=nowTs(); let dirty=false;
         this.data.forEach(t=>{ if(t.status==='done'){ const upd=t.updatedAt||t.createdAt||0; if(now - upd >= DAY){ t.status='archived'; dirty=true; } }});
-        if(dirty) this.save();
-      },
+        if(dirty) this.save(); },
 
       // Рендер
       isOverdue(t){ const ts=toTs(t.due); return !isNaN(ts) && ts < nowTs() && t.status!=='done' && t.status!=='archived'; },
