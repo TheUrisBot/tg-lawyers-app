@@ -20,16 +20,8 @@
     <button role="tab" class="chip" data-filter="archived" onclick="HEARINGS && HEARINGS.setFilter('archived')">Архив</button>
   </div>
 
-  <!-- КАЛЕНДАРЬ -->
-  <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (текущий месяц)"></div>
-
-  <!-- Плашка выбранной даты -->
-  <div id="hearings-day-chip" class="day-chip" hidden>
-    <span id="hearings-day-label"></span>
-    <button class="ghost small" onclick="HEARINGS && HEARINGS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
-  </div>
-
-  <!-- Сворачиваемый блок формы -->
+  
+    <!-- Сворачиваемый блок формы -->
   <div id="hearings-form-wrap" class="collapse" aria-hidden="true">
     <form id="hearings-form" class="cases-form" onsubmit="HEARINGS && HEARINGS.submit(event)">
       <div class="grid">
@@ -76,6 +68,17 @@
       </div>
     </form>
   </div>
+
+  <!-- КАЛЕНДАРЬ -->
+  <div id="hearings-calendar" class="cal" aria-label="Календарь заседаний (текущий месяц)"></div>
+
+  <!-- Плашка выбранной даты -->
+  <div id="hearings-day-chip" class="day-chip" hidden>
+    <span id="hearings-day-label"></span>
+    <button class="ghost small" onclick="HEARINGS && HEARINGS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
+  </div>
+
+
 
   <!-- Список заседаний -->
   <div id="hearings-list" class="cases-list" role="list"></div>
