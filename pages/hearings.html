@@ -29,20 +29,17 @@
           <span>Дело (номер или должник) *</span>
           <input type="text" id="h-combo" placeholder="А40-12345/2025 или Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
           <div id="h-combo-suggest" class="suggest" role="listbox" hidden></div>
-
-          <!-- скрытые «старые» поля для хранения отдельно -->
+          <!-- скрытые «старые» поля -->
           <input type="hidden" id="h-case" />
           <input type="hidden" id="h-debtor" />
         </label>
 
+        <!-- ✅ Новый формат даты/времени как в tasks.html -->
         <label>
-          <span>Дата *</span>
-          <input type="date" id="h-date" required />
+          <span>Дата и время *</span>
+          <input type="datetime-local" id="h-datetime" required />
         </label>
-        <label>
-          <span>Время</span>
-          <input type="time" id="h-time" />
-        </label>
+
         <label>
           <span>Суд</span>
           <input type="text" id="h-court" placeholder="АС г. Москвы" />
@@ -87,7 +84,7 @@
   <div id="hearings-empty" class="cases-empty" hidden>
     <div class="emoji" aria-hidden="true">🗓️</div>
     <div class="title">Пока нет заседаний</div>
-    <div class="hint">Добавь заседание: укажи номер дела и дату.</div>
+    <div class="hint">Добавь заседание: укажи дело и дату/время.</div>
     <button class="primary" onclick="HEARINGS && HEARINGS.toggleForm(true)">Добавить заседание</button>
   </div>
 
@@ -182,7 +179,6 @@
     function pad2(n){return n<10?'0'+n:''+n;}
     function monthInfo(date){ const y=date.getFullYear(), m=date.getMonth(); const first=new Date(y,m,1), last=new Date(y,m+1,0); const dow=(first.getDay()+6)%7; return {y,m,daysInMonth:last.getDate(),startOffset:dow}; }
     function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-    function shiftMonth(y,m,delta){ const d=new Date(y,m,1); d.setMonth(d.getMonth()+delta); return { year:d.getFullYear(), month:d.getMonth() }; }
 
     // индекс дел
     function loadCasesIndex(){
@@ -194,10 +190,9 @@
       }catch(_){ return []; }
     }
 
-    // парсер комбинированной строки
+    // парсер комбостроки
     function parseComboToFields(text){
       const s=(text||'').trim();
-      // поддержка латинской A и кириллической А
       const caseRe = /[AА]\s*\d{1,3}[-–]\d{3,7}\/\d{2,4}/i;
       const m = s.match(caseRe);
       const number = m ? m[0].replace(/\s+/g,'').toUpperCase().replace('A','А') : '';
@@ -206,9 +201,18 @@
       return { number, debtor };
     }
 
+    // собрать значение для <input type="datetime-local">
+    function composeDateTime(dateStr, timeStr){
+      if(!dateStr) return '';
+      const t = (timeStr||'').slice(0,5);
+      return `${dateStr}T${t||'00:00'}`;
+    }
+
     function buildCalendarHTML(state, counts){
       const ref=new Date(state.calendar.year, state.calendar.month, 1);
-      const {y,m,daysInMonth,startOffset}=monthInfo(ref);
+      const y=ref.getFullYear(), m=ref.getMonth();
+      const first=new Date(y,m,1), last=new Date(y,m+1,0);
+      const daysInMonth=last.getDate(), startOffset=(first.getDay()+6)%7;
       const monthName=fmtMonthTitle(ref);
       const weekNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
       const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
@@ -271,9 +275,11 @@
         this.render();
       },
 
-      gotoMonth(year, month){ this.state.calendar.year=year; this.state.calendar.month=month; this.render(); },
-      jumpMonths(delta){ const {year,month}=this.state.calendar; const next=(function(){const d=new Date(year,month,1); d.setMonth(d.getMonth()+delta); return {year:d.getFullYear(), month:d.getMonth()};})(); this.gotoMonth(next.year,next.month); },
-      gotoTodayMonth(){ const d=new Date(); this.gotoMonth(d.getFullYear(), d.getMonth()); },
+      jumpMonths(delta){
+        const d=new Date(this.state.calendar.year,this.state.calendar.month,1); d.setMonth(d.getMonth()+delta);
+        this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render();
+      },
+      gotoTodayMonth(){ const d=new Date(); this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render(); },
       clearSelectedDay(){ this.state.selectedDay=null; const chip=document.getElementById('hearings-day-chip'); if(chip) chip.hidden=true; this.render(); },
 
       toggleForm(force){
@@ -284,8 +290,7 @@
         wrap.style.overflow='hidden';
         if(shouldOpen){
           wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
-          // просто ставим фокус, подсказки НЕ открываем автоматически
-          document.getElementById('h-combo').focus();
+          document.getElementById('h-combo').focus(); // подсказки не открываем автоматически
         } else {
           wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
           setExpanded(btn,wrap,false);
@@ -300,8 +305,8 @@
         if(!input || !box) return;
 
         const openWith = (q)=>{ this.refreshCasesIndex(); this.buildComboSuggestions(box, q); };
-        input.addEventListener('click', ()=>openWith(input.value));     // открываем только по клику
-        input.addEventListener('input', ()=>openWith(input.value));     // и/или при печати
+        input.addEventListener('click', ()=>openWith(input.value));
+        input.addEventListener('input', ()=>openWith(input.value));
         input.addEventListener('blur', ()=>setTimeout(()=>{ box.hidden=true; },120));
 
         box.addEventListener('mousedown', (e)=>{
@@ -309,21 +314,16 @@
           const number = item.getAttribute('data-number')||'';
           const debtor = item.getAttribute('data-debtor')||'';
           const court  = item.getAttribute('data-court')||'';
-          // подставляем в скрытые поля
           document.getElementById('h-case').value = number;
           document.getElementById('h-debtor').value = debtor;
-          // показываем в комбинированной строке красивую подпись
           input.value = number + (debtor ? ' — ' + debtor : '');
-          // если суд пуст — подставим
           const c = document.getElementById('h-court'); if(c && !c.value && court) c.value=court;
           box.hidden = true;
         });
       },
       buildComboSuggestions($box, query){
         const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
-        let items = !q ? list.slice(0,7) : list.filter(c =>
-          c.number.toLowerCase().includes(q) || (c.debtor||'').toLowerCase().includes(q)
-        ).slice(0,7);
+        let items=!q?list.slice(0,7):list.filter(c=> c.number.toLowerCase().includes(q) || (c.debtor||'').toLowerCase().includes(q) ).slice(0,7);
         if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
         $box.innerHTML = items.map(c=>`
           <div class="suggest-item" role="option"
@@ -341,8 +341,9 @@
         document.getElementById('h-case').value   = i.caseNumber||'';
         document.getElementById('h-debtor').value = i.debtor||'';
         document.getElementById('h-combo').value  = (i.caseNumber||'') + (i.debtor?(' — '+i.debtor):'');
-        document.getElementById('h-date').value   = i.date||'';
-        document.getElementById('h-time').value   = i.time||'';
+        // заполнить новый datetime-local
+        const dtEl=document.getElementById('h-datetime');
+        if (dtEl) dtEl.value = composeDateTime(i.date||'', i.time||'');
         document.getElementById('h-court').value  = i.court||'';
         document.getElementById('h-place').value  = i.place||'';
         document.getElementById('h-note').value   = i.note||'';
@@ -353,12 +354,12 @@
       cancelEdit(){
         this.editingId=null;
         document.getElementById('hearings-submit-btn').textContent='Сохранить';
-        ['h-case','h-debtor','h-combo','h-date','h-time','h-court','h-place','h-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        ['h-case','h-debtor','h-combo','h-datetime','h-court','h-place','h-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
         document.getElementById('h-status').value='active';
       },
       submit(ev){
         ev.preventDefault();
-        // если пользователи не выбирали подсказку — распарсим комбостроку
+        // распарсим комбостроку, если подсказку не выбирали
         const combo = document.getElementById('h-combo').value;
         let number  = document.getElementById('h-case').value;
         let debtor  = document.getElementById('h-debtor').value;
@@ -370,15 +371,18 @@
           document.getElementById('h-debtor').value = debtor;
         }
 
-        const date=document.getElementById('h-date').value;
-        const time=document.getElementById('h-time').value;
+        // новый datetime-local
+        const dtVal = document.getElementById('h-datetime').value;
+        if(!number){ alert('Укажи номер дела.'); return; }
+        if(!dtVal){ alert('Укажи дату и время заседания.'); return; }
+        const parts = dtVal.split('T');
+        const date = parts[0] || '';
+        const time = (parts[1] || '').slice(0,5);
+
         const court=document.getElementById('h-court').value.trim();
         const place=document.getElementById('h-place').value.trim();
         const note=document.getElementById('h-note').value.trim();
         const status=document.getElementById('h-status').value;
-
-        if(!number){ alert('Укажи номер дела.'); return; }
-        if(!date){ alert('Укажи дату заседания.'); return; }
 
         if(this.editingId){
           const i=this.data.findIndex(x=>x.id===this.editingId);
@@ -405,20 +409,20 @@
         if(dirty) this.save();
       },
 
-      // ---- Рендер + календарь ----
-      isUpcoming(i){ const ts=toTs(i.date,i.time); return !isNaN(ts) && ts>=nowTs(); },
+      // ---- Календарь ----
       buildCountsForCalendar(){
-        const counts={}; const ref=new Date(this.state.calendar.year,this.state.calendar.month,1);
-        const {y,m,daysInMonth}=monthInfo(ref);
-        for(let d=1; d<=daysInMonth; d++) counts[ymDate(y,m,d)]=0;
-        this.data.forEach(i=>{ if(i.status==='archived'||!i.date) return; const d=i.date; if(counts.hasOwnProperty(d)) counts[d]+=1; });
+        const counts={}; const d=new Date(this.state.calendar.year,this.state.calendar.month,1);
+        const y=d.getFullYear(), m=d.getMonth(); const last=new Date(y,m+1,0); const daysInMonth=last.getDate();
+        for(let day=1; day<=daysInMonth; day++){ counts[ymDate(y,m,day)]=0; }
+        this.data.forEach(i=>{ if(i.status==='archived'||!i.date) return; const ds=i.date; if(Object.hasOwn(counts, ds)) counts[ds]+=1; });
         return counts;
       },
       renderCalendar(){
         const cal=document.getElementById('hearings-calendar'); if(!cal) return;
         const counts=this.buildCountsForCalendar(); cal.innerHTML=buildCalendarHTML(this.state, counts);
-        const prev=cal.querySelector('[data-cal-prev]'); const next=cal.querySelector('[data-cal-next]'); const today=cal.querySelector('[data-cal-today]');
-        prev&&prev.addEventListener('click',()=>this.jumpMonths(-1)); next&&next.addEventListener('click',()=>this.jumpMonths(+1)); today&&today.addEventListener('click',()=>this.gotoTodayMonth());
+        cal.querySelector('[data-cal-prev]')?.addEventListener('click',()=>this.jumpMonths(-1));
+        cal.querySelector('[data-cal-next]')?.addEventListener('click',()=>this.jumpMonths(+1));
+        cal.querySelector('[data-cal-today]')?.addEventListener('click',()=>this.gotoTodayMonth());
         cal.querySelectorAll('[data-cal-jump]').forEach(b=>b.addEventListener('click',()=>{ const n=parseInt((b.getAttribute('data-cal-jump')||'+1').replace('+',''),10); if(!isNaN(n)) this.jumpMonths(n); }));
         cal.querySelectorAll('.cal-day[data-date]').forEach(btn=>btn.addEventListener('click',()=>{
           const date=btn.getAttribute('data-date'); this.state.selectedDay=date;
@@ -427,6 +431,8 @@
           this.render();
         }));
       },
+
+      isUpcoming(i){ const ts=toTs(i.date,i.time); return !isNaN(ts) && ts>=nowTs(); },
 
       render(){
         const list=document.getElementById('hearings-list'); const empty=document.getElementById('hearings-empty');
@@ -449,8 +455,8 @@
 
         const now=nowTs();
         items.sort((a,b)=>{ const at=toTs(a.date,a.time), bt=toTs(b.date,b.time); const aF=!isNaN(at)&&at>=now, bF=!isNaN(bt)&&bt>=now;
-          if(this.state.filter==='upcoming') return at-bt;
-          if(this.state.filter==='past') return bt-at;
+          if(this.state.filter==='upcoming') return at - bt;
+          if(this.state.filter==='past') return bt - at;
           if(aF!==bF) return aF?-1:1;
           return aF?(at-bt):(bt-at);
         });
