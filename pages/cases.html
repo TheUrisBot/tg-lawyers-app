@@ -238,8 +238,13 @@
             (i.inn||'').includes(q)
           );
         }
-        if(this.state.filter==='active') items=items.filter(i=>i.status!=='archived');
-        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
+
+        // ❗ Архив скрыт по умолчанию
+        if (this.state.filter === 'archived') {
+          items = items.filter(i => i.status === 'archived');
+        } else {
+          items = items.filter(i => i.status !== 'archived'); // 'all' и 'active'
+        }
 
         items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (b.updatedAt||0)-(a.updatedAt||0));
 

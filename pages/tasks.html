@@ -190,7 +190,7 @@
         wrap.style.overflow='hidden';
         if(shouldOpen){
           wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
-          document.getElementById('t-title').focus(); // фокус на названии, подсказки не открываем
+          document.getElementById('t-title').focus(); // подсказки не открываем автоматически
         } else {
           wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
           setExpanded(btn,wrap,false);
@@ -254,6 +254,7 @@
         let caseNumber=document.getElementById('t-case').value;
         let debtor=document.getElementById('t-debtor').value;
         const combo=document.getElementById('t-combo').value;
+        if(!title){ alert('Укажи название задачи.'); return; }
         if(!caseNumber && combo){
           const parsed=parseComboToFields(combo);
           caseNumber=parsed.number;
@@ -264,7 +265,6 @@
         const due=document.getElementById('t-due').value;
         const note=document.getElementById('t-note').value.trim();
         const status=document.getElementById('t-status').value;
-        if(!title){ alert('Укажи название задачи.'); return; }
 
         if(this.editingId){
           const i=this.data.findIndex(x=>x.id===this.editingId);
@@ -279,9 +279,12 @@
       toggleArchive(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status=it.status==='archived'?'active':'archived'; it.updatedAt=Date.now(); this.save(); this.render(); },
       remove(id){ if(!confirm('Удалить задачу?')) return; this.data=this.data.filter(x=>x.id!==id); this.save(); this.render(); },
 
-      autoArchiveCompleted(){ const now=nowTs(); let dirty=false;
+      // автоархив «выполнено» спустя 1 день
+      autoArchiveCompleted(){
+        const now=nowTs(); let dirty=false;
         this.data.forEach(t=>{ if(t.status==='done'){ const upd=t.updatedAt||t.createdAt||0; if(now - upd >= DAY){ t.status='archived'; dirty=true; } }});
-        if(dirty) this.save(); },
+        if(dirty) this.save();
+      },
 
       // Рендер
       isOverdue(t){ const ts=toTs(t.due); return !isNaN(ts) && ts < nowTs() && t.status!=='done' && t.status!=='archived'; },
@@ -299,9 +302,17 @@
             (i.note||'').toLowerCase().includes(q)
           );
         }
-        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
-        else if(this.state.filter==='overdue') items=items.filter(i=>i.status!=='archived' && this.isOverdue(i));
-        else if(this.state.filter==='upcoming') items=items.filter(i=>i.status!=='archived' && this.isUpcoming(i));
+
+        // ❗ Архив скрыт по умолчанию + пресеты
+        if (this.state.filter === 'archived') {
+          items = items.filter(i => i.status === 'archived');
+        } else if (this.state.filter === 'overdue') {
+          items = items.filter(i => i.status !== 'archived' && this.isOverdue(i));
+        } else if (this.state.filter === 'upcoming') {
+          items = items.filter(i => i.status !== 'archived' && this.isUpcoming(i));
+        } else {
+          items = items.filter(i => i.status !== 'archived'); // 'all'
+        }
 
         items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (this.isOverdue(b)-this.isOverdue(a)) || (toTs(a.due)-toTs(b.due)));
 

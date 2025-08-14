@@ -34,7 +34,7 @@
           <input type="hidden" id="h-debtor" />
         </label>
 
-        <!-- ✅ Новый формат даты/времени как в tasks.html -->
+        <!-- Формат как в tasks.html -->
         <label>
           <span>Дата и время *</span>
           <input type="datetime-local" id="h-datetime" required />
@@ -201,13 +201,6 @@
       return { number, debtor };
     }
 
-    // собрать значение для <input type="datetime-local">
-    function composeDateTime(dateStr, timeStr){
-      if(!dateStr) return '';
-      const t = (timeStr||'').slice(0,5);
-      return `${dateStr}T${t||'00:00'}`;
-    }
-
     function buildCalendarHTML(state, counts){
       const ref=new Date(state.calendar.year, state.calendar.month, 1);
       const y=ref.getFullYear(), m=ref.getMonth();
@@ -280,7 +273,15 @@
         this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render();
       },
       gotoTodayMonth(){ const d=new Date(); this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render(); },
-      clearSelectedDay(){ this.state.selectedDay=null; const chip=document.getElementById('hearings-day-chip'); if(chip) chip.hidden=true; this.render(); },
+
+      clearSelectedDay(){
+        this.state.selectedDay = null;
+        const chip  = document.getElementById('hearings-day-chip');
+        const label = document.getElementById('hearings-day-label');
+        if (label) label.textContent = '';
+        if (chip)  chip.hidden = true;
+        this.render();
+      },
 
       toggleForm(force){
         const wrap=document.getElementById('hearings-form-wrap');
@@ -341,9 +342,10 @@
         document.getElementById('h-case').value   = i.caseNumber||'';
         document.getElementById('h-debtor').value = i.debtor||'';
         document.getElementById('h-combo').value  = (i.caseNumber||'') + (i.debtor?(' — '+i.debtor):'');
-        // заполнить новый datetime-local
+
         const dtEl=document.getElementById('h-datetime');
-        if (dtEl) dtEl.value = composeDateTime(i.date||'', i.time||'');
+        if (dtEl) dtEl.value = (i.date?i.date:'') + 'T' + ((i.time||'').slice(0,5) || '00:00');
+
         document.getElementById('h-court').value  = i.court||'';
         document.getElementById('h-place').value  = i.place||'';
         document.getElementById('h-note').value   = i.note||'';
@@ -371,7 +373,6 @@
           document.getElementById('h-debtor').value = debtor;
         }
 
-        // новый datetime-local
         const dtVal = document.getElementById('h-datetime').value;
         if(!number){ alert('Укажи номер дела.'); return; }
         if(!dtVal){ alert('Укажи дату и время заседания.'); return; }
@@ -449,9 +450,17 @@
           );
         }
         if(this.state.selectedDay){ items=items.filter(i => (i.date||'')===this.state.selectedDay); }
-        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
-        else if(this.state.filter==='upcoming') items=items.filter(i=>i.status!=='archived'&&this.isUpcoming(i));
-        else if(this.state.filter==='past') items=items.filter(i=>i.status!=='archived'&&!this.isUpcoming(i));
+
+        // ❗ Архив скрыт по умолчанию + остальные пресеты
+        if (this.state.filter === 'archived') {
+          items = items.filter(i => i.status === 'archived');
+        } else if (this.state.filter === 'upcoming') {
+          items = items.filter(i => i.status !== 'archived' && this.isUpcoming(i));
+        } else if (this.state.filter === 'past') {
+          items = items.filter(i => i.status !== 'archived' && !this.isUpcoming(i));
+        } else {
+          items = items.filter(i => i.status !== 'archived'); // 'all'
+        }
 
         const now=nowTs();
         items.sort((a,b)=>{ const at=toTs(a.date,a.time), bt=toTs(b.date,b.time); const aF=!isNaN(at)&&at>=now, bF=!isNaN(bt)&&bt>=now;
@@ -461,7 +470,11 @@
           return aF?(at-bt):(bt-at);
         });
 
-        if(!items.length){ list.innerHTML=''; empty.hidden=false; this.renderCalendar(); window.adjustBottomSpacer&&window.adjustBottomSpacer(); return; }
+        if(!items.length){ list.innerHTML=''; empty.hidden=false; this.renderCalendar();
+          // синхронизация чипа выбранной даты
+          const chip=document.getElementById('hearings-day-chip'); if (chip) chip.hidden = !this.state.selectedDay;
+          window.adjustBottomSpacer&&window.adjustBottomSpacer(); return;
+        }
         empty.hidden=true;
 
         list.innerHTML=items.map(i=>{
@@ -489,6 +502,9 @@
         }).join('');
 
         this.renderCalendar();
+        // синхронизация чипа выбранной даты
+        const chip=document.getElementById('hearings-day-chip'); if (chip) chip.hidden = !this.state.selectedDay;
+
         window.adjustBottomSpacer && window.adjustBottomSpacer();
       }
     };
