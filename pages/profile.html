@@ -1,24 +1,60 @@
 <section class="page profile" id="profile-page" aria-labelledby="profile-title">
   <h1 id="profile-title">Профиль / Утилиты</h1>
 
+  <!-- Меню утилит -->
+  <div class="util-menu" role="tablist" aria-label="Список утилит">
+    <button class="util-chip" role="tab" data-util="exportimport"
+            onclick="PROFILE && PROFILE.open('exportimport')">
+      Экспорт и импорт дел
+    </button>
+    <button class="util-chip" role="tab" data-util="calculatorsgos"
+            onclick="PROFILE && PROFILE.open('calculatorsgos')">
+      Калькулятор гос. пошлины для арбитражных судов
+    </button>
+  </div>
+
   <!-- Контейнер подстраниц -->
   <div id="profile-utility-outlet" class="util-outlet" role="region" aria-label="Область утилит"></div>
 
+  <!-- Пустое состояние -->
+  <div id="profile-empty" class="cases-empty">
+    <div class="emoji" aria-hidden="true">🧰</div>
+    <div class="title">Выбери утилиту</div>
+    <div class="hint">Нажми на нужную вкладку выше.</div>
+  </div>
+
   <style>
+    .util-menu{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 6px; }
+    .util-chip{ border:1px solid var(--separator); background:transparent; color:var(--tg-theme-text-color);
+      padding:10px 12px; border-radius:999px; cursor:pointer; }
+    .util-chip[aria-selected="true"], .util-chip.active{
+      border-color:var(--app-accent); color:var(--app-accent); font-weight:600;
+    }
     .util-outlet{ display:grid; gap:8px; }
+    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
+    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
+    .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
   </style>
 
   <script type="text/plain" id="profile-inline-js">
   (function(){
     const CACHE = new Map();
 
-    // Определяем абсолютный корень проекта (папка, где лежит index.html)
+    function setActive(util){
+      document.querySelectorAll('#profile-page .util-chip').forEach(btn=>{
+        const on = btn.dataset.util === util;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-selected', String(on));
+      });
+    }
+
+    // Абсолютный корень проекта (где index.html)
     function getProjectRoot(){
       const url = new URL(location.href);
       let dir = url.pathname;
       if (!dir.endsWith('/')) dir = dir.slice(0, dir.lastIndexOf('/') + 1);
       if (dir.endsWith('/pages/')) dir = dir.slice(0, -('/pages/'.length));
-      return url.origin + dir; // например http://127.0.0.1:5500/tg-lawyers-app/
+      return url.origin + dir;
     }
     function resolveUtilUrl(utilId){
       return getProjectRoot() + 'utilities/' + utilId + '.html';
@@ -42,6 +78,10 @@
     window.PROFILE = {
       async open(utilId){
         const outlet = document.getElementById('profile-utility-outlet');
+        const empty  = document.getElementById('profile-empty');
+        setActive(utilId);
+        empty.hidden = true;
+
         try{
           const html = await loadFragment(utilId);
           outlet.innerHTML = html;
@@ -58,7 +98,7 @@
       },
       init(){
         const m = location.hash.match(/util=([\w-]+)/);
-        this.open(m ? m[1] : 'exportimport'); // по умолчанию открываем экспорт/импорт
+        if (m) { this.open(m[1]); }
       }
     };
 

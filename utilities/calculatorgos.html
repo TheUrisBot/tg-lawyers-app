@@ -1,0 +1,339 @@
+<section class="util" data-util-id="calculatorsgos">
+  <!-- Заголовок-аккордеон -->
+  <button class="util-accordion" id="gos-toggle" aria-expanded="false" aria-controls="gos-body">
+    <span class="title">Калькулятор гос. пошлины для арбитражных судов</span>
+    <span class="chev" aria-hidden="true">ˬ</span>
+  </button>
+
+  <!-- По умолчанию закрыто -->
+  <div id="gos-body" class="util-body" aria-hidden="true">
+    <div class="util-card">
+      <div class="gos-wrap">
+        <div class="gos-grid">
+          <!-- LEFT: inputs -->
+          <div>
+            <fieldset class="gos-fieldset">
+              <legend>Кто подаёт</legend>
+              <div class="gos-radio" id="gos-applicantBlock">
+                <label><input type="radio" name="gos-applicant" value="fl" checked> Физическое лицо</label>
+                <label><input type="radio" name="gos-applicant" value="ul"> Организация</label>
+              </div>
+              <div id="gos-isDebtorWrap" class="gos-mt8 hidden">
+                <label class="gos-row"><input type="checkbox" id="gos-isDebtor"> Заявление подаёт сам должник (по банкротству)</label>
+                <div class="hint">Если отмечено — пошлина не взимается (подп. 8 абз. 2).</div>
+              </div>
+            </fieldset>
+
+            <fieldset class="gos-fieldset gos-mt12">
+              <legend>Категория обращения</legend>
+              <label for="gos-category">Выберите подпункт</label>
+              <select id="gos-category" class="gos-input">
+                <optgroup label="Исковые заявления">
+                  <option value="1">1) Иск имущественного характера (подлежащий оценке)</option>
+                  <option value="2">2) Споры по договору без требований о возврате/присуждении</option>
+                  <option value="4">4) Иск имущественный (не подлежит оценке) / неимущественный</option>
+                </optgroup>
+                <optgroup label="Судебный приказ">
+                  <option value="3">3) Заявление о вынесении судебного приказа</option>
+                </optgroup>
+                <optgroup label="Оспаривание актов / действий">
+                  <option value="5">5) Оспаривание НПА ФОИВ (ИC/селекция/топологии/ноу-хау/СИ/единая технология)</option>
+                  <option value="6">6) Оспаривание актов ФОИВ разъяснительного характера (патентная сфера и др.)</option>
+                  <option value="7">7) Оспаривание НПА/решений/действий (бездействия) органов и должностных лиц</option>
+                </optgroup>
+                <optgroup label="Банкротство">
+                  <option value="8">8) Заявление о признании должника банкротом</option>
+                  <option value="9">9) Заявления/требования в деле о банкротстве (50% от базовой пошлины)</option>
+                </optgroup>
+                <optgroup label="Прочее">
+                  <option value="10">10) Установление фактов, имеющих юридическое значение</option>
+                  <option value="11p">11) Вступление третьего лица с самост. требованиями — имущественный спор</option>
+                  <option value="11n">11) Вступление третьего лица — спор неимущественный / имущественный неоцениваемый</option>
+                  <option value="12">12) Правопреемство (кроме универсального)</option>
+                  <option value="13">13) Исп. лист по третейскому / признание и исп. иностранных решений (30% от подп. 1)</option>
+                  <option value="14">14) Отмена решения третейского суда (по правилам подп. 1)</option>
+                  <option value="15">15) Дубликат ИЛ, восстановление срока, отсрочка/рассрочка, измен. способа/порядка, поворот, разъяснение</option>
+                  <option value="16">16) Пересмотр по новым или вновь открывшимся обстоятельствам</option>
+                  <option value="17">17) Обеспечение иска / замена меры / отмена обеспечения</option>
+                  <option value="18">18) Компенсация за нарушение разумного срока</option>
+                  <option value="19">19) Апелляционная жалоба / кассационная на судебный приказ</option>
+                  <option value="20">20) Кассационная жалоба</option>
+                  <option value="21">21) Кассация/надзор в ВС РФ; жалоба на определение судьи ВС РФ</option>
+                </optgroup>
+              </select>
+
+              <div id="gos-amountWrap" class="gos-mt12 hidden">
+                <label for="gos-amount">Цена иска / подтверждённая / оспариваемая сумма (₽)</label>
+                <input id="gos-amount" class="gos-input" type="number" min="0" step="1" placeholder="Например, 2 500 000" />
+                <div class="hint">Используется для подп. 1, 3, 11 (имущественный), 13, 14 и в подп. 9 — при выборе основанием подп. 1.</div>
+              </div>
+
+              <div id="gos-basisWrap" class="gos-mt12 hidden">
+                <label for="gos-basis">Основание для расчёта (для подп. 9)</label>
+                <select id="gos-basis" class="gos-input">
+                  <option value="b1">Имущественный спор подлежащий оценке — по подп. 1 (нужна сумма)</option>
+                  <option value="b2">Спор по договору без возврата/присуждения — по подп. 2</option>
+                  <option value="b4">Неимущественный / имущественный неоцениваемый — по подп. 4</option>
+                </select>
+              </div>
+            </fieldset>
+
+            <button id="gos-calcBtn" class="gos-btn gos-mt16">Рассчитать</button>
+          </div>
+
+          <!-- RIGHT: result -->
+          <div>
+            <div class="gos-result">
+              <div class="gos-row" style="justify-content:space-between; align-items:flex-start">
+                <div>
+                  <div class="hint">Итого пошлина</div>
+                  <div class="gos-sum" id="gos-sum">—</div>
+                </div>
+                <button id="gos-copyBtn" class="gos-btn ghost" title="Скопировать сумму">Скопировать</button>
+              </div>
+
+              <div class="gos-mt12 gos-breakdown" id="gos-breakdown">Выберите категорию и заполните поля для расчёта.</div>
+
+              <div class="gos-footer">
+                ⚠️ Это вспомогательный расчёт по предоставленным правилам. Проверяйте актуальную редакцию норм и специальные льготы/освобождения.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- .gos-wrap -->
+    </div> <!-- .util-card -->
+  </div> <!-- #gos-body -->
+
+  <style>
+    /* общие правила и защита от переполнений */
+    .util, .util * { box-sizing:border-box; max-width:100%; }
+    .util{ overflow-x:hidden; }
+
+    /* Аккордеон (как в exportimport) */
+    .util-accordion{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+      border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color);
+      padding:12px; border-radius:14px; cursor:pointer; }
+    .util-accordion .title{ font-weight:600; }
+    .util-accordion .chev{ font-size:1em; transition:transform .2s ease; }
+
+    .util-body{ overflow:hidden; transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; margin-top:6px; }
+    .util-body.open{ opacity:1; }
+
+    .util-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:10px; }
+
+    /* Локальный стиль калькулятора */
+    .gos-wrap{ display:block; }
+    .gos-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+    @media (min-width:880px){ .gos-grid{ grid-template-columns:1.1fr 1.2fr; } }
+
+    .gos-fieldset{ border:1px dashed var(--separator); padding:12px; border-radius:12px; }
+    .gos-fieldset legend{ color:var(--tg-theme-hint-color); font-size:12px; padding:0 6px; }
+    .gos-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .gos-radio{ display:flex; gap:12px; flex-wrap:wrap; }
+    .gos-radio label{ font-weight:500; }
+    .gos-radio input{ margin-right:6px; }
+    .gos-input, .gos-btn, select, input[type="number"], input[type="text"]{
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); outline:none; transition:.15s ease;
+    }
+    .gos-input:focus, select:focus, input:focus{ border-color:var(--app-accent); box-shadow:0 0 0 3px rgba(91,157,255,.2); }
+    .gos-btn{ background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); border-color:transparent; cursor:pointer; }
+    .gos-btn.ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
+    .gos-result{ background:var(--tg-theme-bg-color); border:1px solid var(--separator); border-radius:14px; padding:16px; }
+    .gos-sum{ font-size:28px; font-weight:800; }
+    .gos-breakdown{ font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .gos-footer{ color:var(--tg-theme-hint-color); font-size:12px; margin-top:12px; }
+    .hint{ color:var(--tg-theme-hint-color); font-size:12px; }
+    .hidden{ display:none !important; }
+    .gos-mt8{ margin-top:8px; } .gos-mt12{ margin-top:12px; } .gos-mt16{ margin-top:16px; }
+  </style>
+
+  <script type="text/plain" id="calculatorsgos-inline-js">
+  (function(){
+    // ===== Аккордеон: по умолчанию закрыт. После открытия max-height -> none, чтобы ничего не срезалось
+    (function(){
+      const btn  = document.getElementById('gos-toggle');
+      const body = document.getElementById('gos-body');
+      if (!btn || !body) return;
+
+      function open(){
+        btn.setAttribute('aria-expanded','true');
+        body.setAttribute('aria-hidden','false');
+        body.classList.add('open');
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = body.scrollHeight + 'px';
+        const onEnd = ()=>{ body.style.maxHeight = 'none'; body.style.overflow = 'visible'; body.removeEventListener('transitionend', onEnd); };
+        body.addEventListener('transitionend', onEnd);
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(180deg)';
+      }
+      function close(){
+        btn.setAttribute('aria-expanded','false');
+        body.setAttribute('aria-hidden','true');
+        body.classList.remove('open');
+        const current = body.style.maxHeight === 'none' ? body.scrollHeight : parseFloat(body.style.maxHeight||0);
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = (current||body.scrollHeight) + 'px';
+        void body.offsetHeight;
+        body.style.maxHeight = '0px';
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(0deg)';
+      }
+      // старт закрытым
+      close();
+      btn.addEventListener('click', ()=> (btn.getAttribute('aria-expanded')==='true' ? close() : open()) );
+      window.addEventListener('resize', ()=>{
+        if (btn.getAttribute('aria-expanded') === 'true' && body.style.maxHeight !== 'none'){
+          body.style.maxHeight = body.scrollHeight + 'px';
+        }
+      });
+    })();
+
+    // ===== Логика калькулятора (идентична присланному, с префиксами gos-)
+    const $ = (sel) => document.querySelector(sel);
+    const fmt = (n) => new Intl.NumberFormat('ru-RU', {style:'currency', currency:'RUB', maximumFractionDigits:0}).format(Math.round(n||0));
+
+    const categoryEl = $('#gos-category');
+    const amountWrap = $('#gos-amountWrap');
+    const amountEl   = $('#gos-amount');
+    const basisWrap  = $('#gos-basisWrap');
+    const basisEl    = $('#gos-basis');
+    const isDebtorWrap = $('#gos-isDebtorWrap');
+    const isDebtorEl   = $('#gos-isDebtor');
+    const sumEl = $('#gos-sum');
+    const breakdownEl = $('#gos-breakdown');
+    const copyBtn = $('#gos-copyBtn');
+
+    function getApplicant(){
+      return (document.querySelector('input[name="gos-applicant"]:checked')||{}).value || 'fl';
+    }
+    function needAmount(cat){
+      return ['1','3','11p','13','14'].includes(cat) || (cat==='9' && basisEl.value==='b1');
+    }
+    function toggleVisibility(){
+      const cat = categoryEl.value;
+      amountWrap.classList.toggle('hidden', !needAmount(cat));
+      isDebtorWrap.classList.toggle('hidden', cat !== '8');
+      basisWrap.classList.toggle('hidden', cat !== '9');
+    }
+
+    function calcItem1(sum){
+      const s = Number(sum||0);
+      if (!isFinite(s) || s<=0) return {fee:0, note:'Цена иска не указана.'};
+      let fee=0; let parts=[]; let capped=false;
+      if (s <= 100000){
+        fee = 10000; parts.push('до 100 000 ₽ → 10 000 ₽');
+      } else if (s <= 1000000){
+        fee = 10000 + 0.05*(s-100000);
+        parts.push('10 000 ₽ + 5% от суммы сверх 100 000 ₽');
+      } else if (s <= 10000000){
+        fee = 55000 + 0.03*(s-1000000);
+        parts.push('55 000 ₽ + 3% от суммы сверх 1 000 000 ₽');
+      } else if (s <= 50000000){
+        fee = 325000 + 0.01*(s-10000000);
+        parts.push('325 000 ₽ + 1% от суммы сверх 10 000 000 ₽');
+      } else {
+        fee = 725000 + 0.005*(s-50000000);
+        parts.push('725 000 ₽ + 0,5% от суммы сверх 50 000 000 ₽ (с общим потолком 10 000 000 ₽)');
+        if (fee > 10000000){ fee = 10000000; capped=true; }
+      }
+      return {fee:Math.round(fee), parts, capped};
+    }
+
+    function calc(){
+      const cat = categoryEl.value;
+      const who = getApplicant(); // 'fl' | 'ul'
+      const isFL = who==='fl';
+      const amt = Number(amountEl.value||0);
+
+      let total = 0; let explain = [];
+
+      switch(cat){
+        case '1': {
+          const r = calcItem1(amt);
+          total = r.fee; explain.push('Подп. 1: расчёт по шкале для имущественных требований.');
+          if (r.parts && r.parts.length) explain.push('Формула: '+r.parts.join(' → '));
+          if (r.capped) explain.push('Применён общий потолок 10 000 000 ₽.');
+          break;
+        }
+        case '2': { total = isFL ? 15000 : 50000; explain.push('Подп. 2: фиксированная ставка — физ. лица 15 000 ₽, организации 50 000 ₽.'); break; }
+        case '3': {
+          const base = calcItem1(amt).fee; const raw = 0.5 * base; total = Math.max(Math.round(raw), 8000);
+          explain.push('Подп. 3: 50% от пошлины по подп. 1 (от цены иска), но не менее 8 000 ₽.');
+          explain.push(`База по подп. 1: ${fmt(base)} → 50% = ${fmt(raw)}; применён минимум 8 000 ₽ при необходимости.`);
+          break;
+        }
+        case '4': { total = isFL ? 15000 : 50000; explain.push('Подп. 4: фиксированная ставка — физ. лица 15 000 ₽, организации 50 000 ₽.'); break; }
+        case '5': { total = isFL ? 10000 : 60000; explain.push('Подп. 5: фиксированная ставка — физ. лица 10 000 ₽, организации 60 000 ₽.'); break; }
+        case '6': { total = isFL ? 10000 : 60000; explain.push('Подп. 6: фиксированная ставка — физ. лица 10 000 ₽, организации 60 000 ₽.'); break; }
+        case '7': { total = isFL ? 10000 : 50000; explain.push('Подп. 7: фиксированная ставка — физ. лица 10 000 ₽, организации 50 000 ₽.'); break; }
+        case '8': {
+          if (isDebtorEl.checked){ total = 0; explain.push('Подп. 8: должник обращается сам — пошлина не взимается.'); }
+          else { total = isFL ? 10000 : 100000; explain.push('Подп. 8: фиксированная ставка — физ. лица 10 000 ₽, организации 100 000 ₽.'); }
+          break;
+        }
+        case '9': {
+          let base = 0; let baseExplain = '';
+          const b = basisEl.value;
+          if (b==='b1') { base = calcItem1(amt).fee; baseExplain = `база по подп. 1 от суммы ${fmt(amt)} = ${fmt(base)}`; }
+          else if (b==='b2') { base = isFL ? 15000 : 50000; baseExplain = `база по подп. 2 = ${fmt(base)}`; }
+          else { base = isFL ? 15000 : 50000; baseExplain = `база по подп. 4 = ${fmt(base)}`; }
+          total = Math.round(0.5 * base);
+          explain.push('Подп. 9: 50% от пошлины по выбору основания (исходя из существа требований).');
+          explain.push('Основание: '+baseExplain+` → 50% = ${fmt(total)}`);
+          break;
+        }
+        case '10': { total = 30000; explain.push('Подп. 10: фиксированная ставка 30 000 ₽.'); break; }
+        case '11p': {
+          const r = calcItem1(amt); total = r.fee; explain.push('Подп. 11: имущественный спор — в размере пошлины по подп. 1 исходя из оспариваемой суммы.');
+          if (r.parts && r.parts.length) explain.push('Формула: '+r.parts.join(' → '));
+          if (r.capped) explain.push('Применён общий потолок 10 000 000 ₽.');
+          break;
+        }
+        case '11n': { total = isFL ? 15000 : 50000; explain.push('Подп. 11: неимущественный / имущественный неоцениваемый — как по подп. 4.'); break; }
+        case '12': { total = isFL ? 5000 : 25000; explain.push('Подп. 12: фиксированная ставка — физ. лица 5 000 ₽, организации 25 000 ₽.'); break; }
+        case '13': { const base = calcItem1(amt).fee; total = Math.round(0.3 * base);
+          explain.push('Подп. 13: 30% от пошлины по подп. 1, исходя из суммы, подтверждённой решением.');
+          explain.push(`База по подп. 1: ${fmt(base)} → 30% = ${fmt(total)}`); break; }
+        case '14': {
+          const r = calcItem1(amt); total = r.fee; explain.push('Подп. 14: по правилам подп. 1 от оспариваемой суммы.');
+          if (r.parts && r.parts.length) explain.push('Формула: '+r.parts.join(' → '));
+          if (r.capped) explain.push('Применён общий потолок 10 000 000 ₽.');
+          break;
+        }
+        case '15': { total = 10000; explain.push('Подп. 15: фиксированная ставка 10 000 ₽.'); break; }
+        case '16': { total = 30000; explain.push('Подп. 16: фиксированная ставка 30 000 ₽.'); break; }
+        case '17': { total = 30000; explain.push('Подп. 17: фиксированная ставка 30 000 ₽.'); break; }
+        case '18': { total = isFL ? 300 : 6000; explain.push('Подп. 18: фиксированная ставка — физ. лица 300 ₽, организации 6 000 ₽.'); break; }
+        case '19': { total = isFL ? 10000 : 30000; explain.push('Подп. 19: фиксированная ставка — физ. лица 10 000 ₽, организации 30 000 ₽.'); break; }
+        case '20': { total = isFL ? 20000 : 50000; explain.push('Подп. 20: фиксированная ставка — физ. лица 20 000 ₽, организации 50 000 ₽.'); break; }
+        case '21': { total = isFL ? 30000 : 80000; explain.push('Подп. 21: фиксированная ставка — физ. лица 30 000 ₽, организации 80 000 ₽.'); break; }
+        default: total = 0; explain.push('Выберите подпункт.');
+      }
+
+      sumEl.textContent = fmt(total);
+      breakdownEl.textContent = explain.join('\\n');
+    }
+
+    // events
+    document.querySelectorAll('input[name="gos-applicant"]').forEach(r => r.addEventListener('change', ()=>{}));
+    document.getElementById('gos-category').addEventListener('change', toggleVisibility);
+    document.getElementById('gos-basis').addEventListener('change', toggleVisibility);
+    document.getElementById('gos-calcBtn').addEventListener('click', calc);
+
+    document.getElementById('gos-copyBtn').addEventListener('click', ()=>{
+      const txt = (document.getElementById('gos-sum').textContent||'').trim();
+      navigator.clipboard.writeText(txt).then(()=>{
+        const b = document.getElementById('gos-copyBtn');
+        b.textContent = 'Скопировано!'; setTimeout(()=> b.textContent='Скопировать', 1200);
+      }).catch(()=>{
+        const b = document.getElementById('gos-copyBtn');
+        b.textContent = 'Не удалось'; setTimeout(()=> b.textContent='Скопировать', 1200);
+      });
+    });
+
+    // init
+    toggleVisibility();
+  })();
+  </script>
+</section>
