@@ -1,0 +1,407 @@
+<section class="util" data-util-id="exportimport">
+  <!-- Заголовок-аккордеон -->
+  <button class="util-accordion" id="exim-toggle" aria-expanded="true" aria-controls="exim-body">
+    <span class="title">Экспорт и импорт дел</span>
+    <span class="chev" aria-hidden="true">ˬ</span>
+  </button>
+
+  <div id="exim-body" class="util-body open" aria-hidden="false">
+    <div class="util-card">
+      <p class="muted">
+        Экспортирует все дела из локальной базы (<code>tl_cases_v1</code>). Импорт обновляет записи при совпадении
+        <strong>«Номер дела»</strong>, иначе создаёт новые.
+      </p>
+
+      <!-- Кнопки экспорта -->
+      <div class="btn-row">
+        <button class="primary" id="btn-export-xlsx">Экспорт в Excel (.xlsx)</button>
+        <button class="ghost"   id="btn-export-csv">Экспорт в CSV</button>
+      </div>
+
+      <hr class="sep" />
+
+      <!-- Импорт -->
+      <div class="import-wrap">
+        <label class="file-label">
+          <span>Файл Excel/CSV</span>
+          <input type="file" id="exim-file" accept=".xlsx,.xls,.csv" />
+        </label>
+
+        <div id="dropzone" class="dropzone" aria-label="Перетащи файл сюда">
+          Перетащи файл сюда или выбери его выше
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" id="btn-import">Импортировать</button>
+          <button class="ghost" id="btn-cols-hint">Какие столбцы поддерживаются?</button>
+        </div>
+
+        <!-- Подсказка по столбцам (строго 6 полей) -->
+        <div id="cols-hint" class="hint-collapse" aria-hidden="true">
+          <div class="hint-scroll">
+            <p class="muted" style="margin-top:0">
+              Поддерживаются <strong>ровно</strong> следующие заголовки (регистр не важен):
+            </p>
+            <ul class="no-overflow">
+              <li><code>Номер дела</code></li>
+              <li><code>Должник</code></li>
+              <li><code>ИНН</code></li>
+              <li><code>Суд</code></li>
+              <li><code>Примечание</code></li>
+              <li><code>Статус</code></li>
+            </ul>
+            <p class="muted">Лишние столбцы игнорируются. «Номер дела» обязателен.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Результат импорта -->
+      <div id="import-result" class="result" hidden>
+        <div class="result-line">Добавлено: <strong id="res-added">0</strong></div>
+        <div class="result-line">Обновлено: <strong id="res-updated">0</strong></div>
+        <div class="result-line">Всего в базе: <strong id="res-total">0</strong></div>
+
+        <button class="ghost small" id="btn-toggle-list">Показать список затронутых дел</button>
+        <div id="affected-list" class="list-collapse" hidden>
+          <div class="list-scroll" id="affected-scroll"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* защита от горизонтального переполнения */
+    .util, .util * { box-sizing: border-box; max-width: 100%; }
+    .util{ overflow-x:hidden; }
+    .util p, .util li, .util code { word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
+
+    .util-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:10px; }
+    .muted{ color:var(--tg-theme-hint-color); }
+    .btn-row{ display:flex; gap:8px; flex-wrap:wrap; }
+    .primary,.ghost{ appearance:none; border:1px solid transparent; padding:10px 12px; border-radius:12px; cursor:pointer;
+      background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); }
+    .ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
+    .ghost.small{ padding:6px 10px; border-radius:10px; }
+
+    .sep{ border:none; border-top:1px solid var(--separator); margin:4px 0; }
+
+    .file-label{ display:grid; gap:6px; font-size:12px; color:var(--tg-theme-hint-color); }
+    .file-label input{ padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); width:100%; }
+
+    .dropzone{ border:1px dashed var(--separator); border-radius:12px; padding:16px; text-align:center;
+      color:var(--tg-theme-hint-color); min-height:56px; display:flex; align-items:center; justify-content:center; }
+    .dropzone.drag{ border-color:var(--app-accent); color:var(--app-accent); }
+
+    /* Аккордеон */
+    .util-accordion{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+      border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color);
+      padding:12px; border-radius:14px; cursor:pointer; }
+    .util-accordion .title{ font-weight:600; }
+    .util-accordion .chev{ font-size:1em; transition:transform .2s ease; }
+
+    /* Важно: по умолчанию max-height управляем анимацией,
+       но после полного открытия ставим max-height:none, чтобы ничего не «резало» */
+    .util-body{ overflow:hidden; transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; margin-top:6px; }
+    .util-body.open{ opacity:1; }
+
+    /* Подсказка-коллапс */
+    .hint-collapse{ border:1px solid var(--separator); border-radius:12px; overflow:hidden;
+      transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; }
+    .hint-collapse.open{ opacity:1; }
+    .hint-scroll{ max-height:220px; overflow:auto; padding:8px; }
+    .hint-scroll ul{ margin:0; padding-inline-start:18px; }
+
+    /* Список затронутых дел */
+    .list-collapse{ border-top:1px dashed var(--separator); margin-top:8px; }
+    .list-scroll{ max-height:220px; overflow:auto; padding:8px 0; }
+    .result-line{ margin:2px 0; }
+  </style>
+
+  <script type="text/plain" id="exportimport-inline-js">
+  (function(){
+    const LS_CASES = 'tl_cases_v1';
+
+    // ===== Аккордеон с «max-height: none» после открытия
+    (function(){
+      const btn  = document.getElementById('exim-toggle');
+      const body = document.getElementById('exim-body');
+      if (!btn || !body) return;
+
+      function open(){
+        btn.setAttribute('aria-expanded','true');
+        body.setAttribute('aria-hidden','false');
+        body.classList.add('open');
+
+        // запускаем анимацию открытия
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = body.scrollHeight + 'px';
+
+        // после завершения анимации убираем ограничение
+        const onEnd = ()=>{ body.style.maxHeight = 'none'; body.style.overflow = 'visible'; body.removeEventListener('transitionend', onEnd); };
+        body.addEventListener('transitionend', onEnd);
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(180deg)';
+      }
+
+      function close(){
+        btn.setAttribute('aria-expanded','false');
+        body.setAttribute('aria-hidden','true');
+        body.classList.remove('open');
+
+        // возвращаем из 'none' к конкретному числу и анимируем до нуля
+        const current = body.scrollHeight;
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = current + 'px';
+        requestAnimationFrame(()=>{ body.style.maxHeight = '0px'; });
+
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(0deg)';
+      }
+
+      // старт открытым
+      open();
+
+      btn.addEventListener('click', ()=>{
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        if (isOpen) close(); else open();
+      });
+
+      // если окно ресайзнули, и тело ещё не переведено в 'none', поправим
+      window.addEventListener('resize', ()=>{
+        if (btn.getAttribute('aria-expanded') === 'true' && body.style.maxHeight !== 'none'){
+          body.style.maxHeight = body.scrollHeight + 'px';
+        }
+      });
+    })();
+
+    // ===== Helpers
+    function readCases(){
+      try { const raw=localStorage.getItem(LS_CASES); const arr=raw?JSON.parse(raw):[]; return Array.isArray(arr)?arr:[]; }
+      catch(_){ return []; }
+    }
+    function saveCases(arr){ localStorage.setItem(LS_CASES, JSON.stringify(arr||[])); }
+    function normalizeStatus(s){
+      const v=String(s||'').toLowerCase();
+      return (v==='archived' || v==='архив') ? 'archived' : 'active';
+    }
+    function ensureXLSX(){
+      return new Promise((resolve, reject)=>{
+        if (window.XLSX) return resolve(window.XLSX);
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        s.onload = ()=> resolve(window.XLSX);
+        s.onerror = ()=> reject(new Error("Не удалось загрузить библиотеку XLSX"));
+        document.head.appendChild(s);
+      });
+    }
+
+    // ===== Экспорт
+    async function exportXLSX(){
+      const data = readCases();
+      const rows = data.map(i=>({
+        'Номер дела': i.number || '',
+        'Должник':    i.debtor || '',
+        'ИНН':        i.inn || '',
+        'Суд':        i.court || '',
+        'Примечание': i.note || '',
+        'Статус':     i.status || 'active',
+      }));
+      const XLSX = await ensureXLSX();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Дела');
+      XLSX.writeFile(wb, 'cases_export.xlsx');
+    }
+    function exportCSV(){
+      const data = readCases();
+      const cols = ['Номер дела','Должник','ИНН','Суд','Примечание','Статус'];
+      const esc = (v)=>('"'+String(v??'').replace(/"/g,'""')+'"');
+      const lines = [cols.join(';')].concat(data.map(i=>[
+        esc(i.number||''), esc(i.debtor||''), esc(i.inn||''), esc(i.court||''), esc(i.note||''), esc(i.status||'active')
+      ].join(';')));
+      const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cases_export.csv'; document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    // ===== Импорт (строго 6 русских заголовков)
+    function parseCSV(text){
+      const rows = text.replace(/\r/g,'').split('\n').filter(Boolean)
+        .map(r=>r.split(';').map(s=>s.replace(/^"|"$/g,'').replace(/""/g,'"')));
+      const [head, ...body] = rows;
+      return { head, body };
+    }
+    function headerIndex(head, names){
+      const lower = head.map(h=> String(h||'').toLowerCase().trim());
+      for (const n of names){ const i = lower.indexOf(n.toLowerCase()); if (i !== -1) return i; }
+      return -1;
+    }
+
+    async function importFile(file){
+      if (!file) { alert('Выбери файл .xlsx или .csv'); return; }
+
+      const affected = [];
+      let added=0, updated=0;
+      let rows = [];
+
+      if (/\.xlsx?$/i.test(file.name)) {
+        const XLSX = await ensureXLSX();
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        const first = wb.SheetNames[0];
+        const ws = wb.Sheets[first];
+        const json = XLSX.utils.sheet_to_json(ws, {defval:''});
+        rows = json.map(r=>{
+          const m = {};
+          Object.keys(r).forEach(k => { m[String(k).toLowerCase().trim()] = r[k]; });
+          return {
+            number: m['номер дела'] || '',
+            debtor: m['должник'] || '',
+            inn:    m['инн'] || '',
+            court:  m['суд'] || '',
+            note:   m['примечание'] || '',
+            status: normalizeStatus(m['статус']),
+          };
+        });
+      } else if (/\.csv$/i.test(file.name)) {
+        const text = await file.text();
+        const {head, body} = parseCSV(text);
+        const idxNumber = headerIndex(head, ['номер дела']);
+        const idxDebtor = headerIndex(head, ['должник']);
+        const idxINN    = headerIndex(head, ['инн']);
+        const idxCourt  = headerIndex(head, ['суд']);
+        const idxNote   = headerIndex(head, ['примечание']);
+        const idxStatus = headerIndex(head, ['статус']);
+
+        rows = body.map(r=>({
+          number: idxNumber>=0 ? r[idxNumber] : '',
+          debtor: idxDebtor>=0 ? r[idxDebtor] : '',
+          inn:    idxINN>=0 ? r[idxINN] : '',
+          court:  idxCourt>=0 ? r[idxCourt] : '',
+          note:   idxNote>=0 ? r[idxNote] : '',
+          status: normalizeStatus(idxStatus>=0 ? r[idxStatus] : ''),
+        })).filter(x=>x.number);
+      } else {
+        alert('Поддерживаются файлы .xlsx и .csv'); return;
+      }
+
+      if (!rows.length){ alert('Файл пуст или не распознан'); return; }
+
+      const data = readCases();
+      const byNumber = new Map(data.map(i=>[String(i.number).trim(), i]));
+      rows.forEach(r=>{
+        const key = String(r.number||'').trim();
+        if (!key) return;
+        const existing = byNumber.get(key);
+        if (existing){
+          existing.debtor = r.debtor ?? existing.debtor;
+          existing.inn    = r.inn ?? existing.inn;
+          existing.court  = r.court ?? existing.court;
+          existing.note   = r.note ?? existing.note;
+          existing.status = r.status || existing.status || 'active';
+          existing.updatedAt = Date.now();
+          updated++;
+          affected.push({type:'update', number:key});
+        } else {
+          const item = {
+            id:String(Date.now())+Math.random().toString(16).slice(2),
+            number:key, debtor:r.debtor||'', inn:r.inn||'', court:r.court||'',
+            note:r.note||'', status:r.status||'active',
+            createdAt:Date.now(), updatedAt:Date.now()
+          };
+          data.push(item);
+          byNumber.set(key, item);
+          added++;
+          affected.push({type:'add', number:key});
+        }
+      });
+
+      saveCases(data);
+      showResult({added, updated, total:data.length, affected});
+    }
+
+    // ===== UI wiring
+    function showResult({added, updated, total, affected}){
+      const wrap = document.getElementById('import-result'); if (!wrap) return;
+      wrap.hidden = false;
+      const a = document.getElementById('res-added');   if (a) a.textContent = String(added);
+      const u = document.getElementById('res-updated'); if (u) u.textContent = String(updated);
+      const t = document.getElementById('res-total');   if (t) t.textContent = String(total);
+
+      const list = document.getElementById('affected-scroll');
+      if (list){
+        list.innerHTML = affected.map(x=>`<div>${x.type==='add'?'➕ добавлено':'✏️ обновлено'} — <strong>${x.number}</strong></div>`).join('') || '<div class="muted">Нет изменений</div>';
+      }
+      const lc = document.getElementById('affected-list'); if (lc) lc.hidden = true;
+      const btn = document.getElementById('btn-toggle-list');
+      if (btn){
+        btn.textContent = 'Показать список затронутых дел';
+        btn.onclick = ()=>{
+          const open = lc && lc.hidden;
+          if (lc) lc.hidden = !open;
+          btn.textContent = open ? 'Скрыть список' : 'Показать список затронутых дел';
+        };
+      }
+    }
+
+    function slideToggle(el){
+      const isOpen = el.classList.contains('open');
+      el.style.overflow = 'hidden';
+      if (isOpen){
+        // из текущей высоты анимируем до нуля
+        el.style.maxHeight = el.scrollHeight + 'px';
+        requestAnimationFrame(()=>{
+          el.style.maxHeight = '0px';
+          el.classList.remove('open');
+          el.setAttribute('aria-hidden','true');
+        });
+      } else {
+        // раскрываем и сразу устанавливаем точную высоту
+        el.classList.add('open');
+        el.removeAttribute('hidden');
+        el.setAttribute('aria-hidden','false');
+        el.style.maxHeight = el.scrollHeight + 'px';
+      }
+    }
+
+    function initUI(){
+      const btnX = document.getElementById('btn-export-xlsx');
+      const btnC = document.getElementById('btn-export-csv');
+      const btnI = document.getElementById('btn-import');
+      const inp  = document.getElementById('exim-file');
+      const dz   = document.getElementById('dropzone');
+      const btnH = document.getElementById('btn-cols-hint');
+      const hint = document.getElementById('cols-hint');
+
+      btnX && (btnX.onclick = exportXLSX);
+      btnC && (btnC.onclick = exportCSV);
+      btnI && (btnI.onclick = ()=> importFile(inp?.files?.[0]));
+
+      // подсказка столбцов
+      if (btnH && hint){
+        btnH.onclick = ()=> slideToggle(hint);
+        // когда подсказка анимируется, тело аккордеона уже в режиме max-height:none,
+        // поэтому ничего не режется. Отдельного пересчёта не требуется.
+      }
+
+      // drag&drop
+      if (dz){
+        const on = (e)=>{ e.preventDefault(); e.stopPropagation(); };
+        ['dragenter','dragover','dragleave','drop'].forEach(ev=> dz.addEventListener(ev, on));
+        dz.addEventListener('dragenter', ()=> dz.classList.add('drag'));
+        dz.addEventListener('dragover',  ()=> dz.classList.add('drag'));
+        dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
+        dz.addEventListener('drop', async (e)=>{
+          dz.classList.remove('drag');
+          const file = e.dataTransfer?.files?.[0];
+          if (file){
+            (document.getElementById('exim-file')||{}).files = e.dataTransfer.files;
+            await importFile(file);
+          }
+        });
+      }
+    }
+
+    initUI();
+  })();
+  </script>
+</section>
