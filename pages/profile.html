@@ -1,52 +1,19 @@
 <section class="page profile" id="profile-page" aria-labelledby="profile-title">
   <h1 id="profile-title">Профиль / Утилиты</h1>
 
-  <!-- Меню утилит -->
-  <div class="util-menu" role="tablist" aria-label="Список утилит">
-    <button class="util-chip" role="tab" data-util="exportimport"
-            onclick="PROFILE && PROFILE.open('exportimport')">
-      Экспорт и импорт дел
-    </button>
-    <button class="util-chip" role="tab" data-util="calculatorgos"
-            onclick="PROFILE && PROFILE.open('calculatorgos')">
-      Калькулятор гос. пошлины для арбитражных судов
-    </button>
-  </div>
-
-  <!-- Контейнер подстраниц -->
+  <!-- Здесь будут смонтированы утилиты (экспорт/импорт и калькулятор) -->
   <div id="profile-utility-outlet" class="util-outlet" role="region" aria-label="Область утилит"></div>
 
-  <!-- Пустое состояние -->
-  <div id="profile-empty" class="cases-empty">
-    <div class="emoji" aria-hidden="true">🧰</div>
-    <div class="title">Выбери утилиту</div>
-    <div class="hint">Нажми на нужную вкладку выше.</div>
-  </div>
-
   <style>
-    .util-menu{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 6px; }
-    .util-chip{ border:1px solid var(--separator); background:transparent; color:var(--tg-theme-text-color);
-      padding:10px 12px; border-radius:999px; cursor:pointer; }
-    .util-chip[aria-selected="true"], .util-chip.active{
-      border-color:var(--app-accent); color:var(--app-accent); font-weight:600;
-    }
-    .util-outlet{ display:grid; gap:8px; }
+    .util-outlet{ display:grid; gap:10px; }
     .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
-    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
     .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
   </style>
 
   <script type="text/plain" id="profile-inline-js">
   (function(){
     const CACHE = new Map();
-
-    function setActive(util){
-      document.querySelectorAll('#profile-page .util-chip').forEach(btn=>{
-        const on = btn.dataset.util === util;
-        btn.classList.toggle('active', on);
-        btn.setAttribute('aria-selected', String(on));
-      });
-    }
+    const UTIL_IDS = ['exportimport','calculatorgos']; // порядок показа
 
     // Абсолютный корень проекта (где index.html)
     function getProjectRoot(){
@@ -59,7 +26,7 @@
     function resolveUtilUrl(utilId){
       return getProjectRoot() + 'utilities/' + utilId + '.html';
     }
-    async function loadFragment(utilId){
+    async function fetchFragment(utilId){
       if (CACHE.has(utilId)) return CACHE.get(utilId);
       const url = resolveUtilUrl(utilId);
       const res = await fetch(url, {cache:'no-store'});
@@ -75,34 +42,39 @@
       });
     }
 
-    window.PROFILE = {
-      async open(utilId){
-        const outlet = document.getElementById('profile-utility-outlet');
-        const empty  = document.getElementById('profile-empty');
-        setActive(utilId);
-        empty.hidden = true;
+    async function mountAll(){
+      const outlet = document.getElementById('profile-utility-outlet');
+      try{
+        const htmlParts = await Promise.all(UTIL_IDS.map(fetchFragment));
+        outlet.innerHTML = htmlParts.join('\n');
+        runInlineScripts(outlet);
 
-        try{
-          const html = await loadFragment(utilId);
-          outlet.innerHTML = html;
-          runInlineScripts(outlet);
-          try { history.replaceState(null,'', '#util=' + utilId); } catch(_){}
-        }catch(err){
-          console.error(err);
-          outlet.innerHTML = `
-            <div class="cases-empty">
-              <div class="title">Ошибка загрузки</div>
-              <div class="hint">${err.message}</div>
-            </div>`;
-        }
-      },
-      init(){
+        // Если в хеше указана конкретная утилита — раскроем её и проскроллим
         const m = location.hash.match(/util=([\w-]+)/);
-        if (m) { this.open(m[1]); }
+        const util = m ? m[1] : null;
+        const toggleIdMap = {
+          exportimport: 'exim-toggle',
+          calculatorgos: 'gos-toggle'
+        };
+        if (util && toggleIdMap[util]){
+          const btn = document.getElementById(toggleIdMap[util]);
+          if (btn && btn.getAttribute('aria-expanded') !== 'true'){
+            btn.click();
+            // мягкий скролл к секции
+            setTimeout(()=>{ btn.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+          }
+        }
+      }catch(err){
+        console.error(err);
+        outlet.innerHTML = `
+          <div class="cases-empty">
+            <div class="title">Ошибка загрузки утилит</div>
+            <div class="hint">${err.message}</div>
+          </div>`;
       }
-    };
+    }
 
-    window.PROFILE.init();
+    mountAll();
   })();
   </script>
 
