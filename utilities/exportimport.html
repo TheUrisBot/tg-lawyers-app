@@ -1,11 +1,12 @@
 <section class="util" data-util-id="exportimport">
   <!-- Заголовок-аккордеон -->
-  <button class="util-accordion" id="exim-toggle" aria-expanded="true" aria-controls="exim-body">
+  <button class="util-accordion" id="exim-toggle" aria-expanded="false" aria-controls="exim-body">
     <span class="title">Экспорт и импорт дел</span>
     <span class="chev" aria-hidden="true">ˬ</span>
   </button>
 
-  <div id="exim-body" class="util-body open" aria-hidden="false">
+  <!-- По умолчанию закрыто -->
+  <div id="exim-body" class="util-body" aria-hidden="true">
     <div class="util-card">
       <p class="muted">
         Экспортирует все дела из локальной базы (<code>tl_cases_v1</code>). Импорт обновляет записи при совпадении
@@ -101,8 +102,7 @@
     .util-accordion .title{ font-weight:600; }
     .util-accordion .chev{ font-size:1em; transition:transform .2s ease; }
 
-    /* Важно: по умолчанию max-height управляем анимацией,
-       но после полного открытия ставим max-height:none, чтобы ничего не «резало» */
+    /* Анимация контейнера: закрыт по умолчанию */
     .util-body{ overflow:hidden; transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; margin-top:6px; }
     .util-body.open{ opacity:1; }
 
@@ -123,7 +123,7 @@
   (function(){
     const LS_CASES = 'tl_cases_v1';
 
-    // ===== Аккордеон с «max-height: none» после открытия
+    // ===== Аккордеон: по умолчанию закрыт. При открытии после анимации ставим max-height:none
     (function(){
       const btn  = document.getElementById('exim-toggle');
       const body = document.getElementById('exim-body');
@@ -134,11 +134,9 @@
         body.setAttribute('aria-hidden','false');
         body.classList.add('open');
 
-        // запускаем анимацию открытия
         body.style.overflow = 'hidden';
         body.style.maxHeight = body.scrollHeight + 'px';
 
-        // после завершения анимации убираем ограничение
         const onEnd = ()=>{ body.style.maxHeight = 'none'; body.style.overflow = 'visible'; body.removeEventListener('transitionend', onEnd); };
         body.addEventListener('transitionend', onEnd);
         const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(180deg)';
@@ -149,24 +147,26 @@
         body.setAttribute('aria-hidden','true');
         body.classList.remove('open');
 
-        // возвращаем из 'none' к конкретному числу и анимируем до нуля
-        const current = body.scrollHeight;
+        // если было 'none', вернёмся к числу и анимируем к 0
+        const current = body.style.maxHeight === 'none' ? body.scrollHeight : parseFloat(body.style.maxHeight||0);
         body.style.overflow = 'hidden';
-        body.style.maxHeight = current + 'px';
-        requestAnimationFrame(()=>{ body.style.maxHeight = '0px'; });
+        body.style.maxHeight = (current||body.scrollHeight) + 'px';
+        // принудительный reflow
+        void body.offsetHeight;
+        body.style.maxHeight = '0px';
 
         const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(0deg)';
       }
 
-      // старт открытым
-      open();
+      // старт: ЗАКРЫТО
+      close();
 
       btn.addEventListener('click', ()=>{
         const isOpen = btn.getAttribute('aria-expanded') === 'true';
         if (isOpen) close(); else open();
       });
 
-      // если окно ресайзнули, и тело ещё не переведено в 'none', поправим
+      // если окно ресайзнули и тело в режиме «анимация открытия», подправим
       window.addEventListener('resize', ()=>{
         if (btn.getAttribute('aria-expanded') === 'true' && body.style.maxHeight !== 'none'){
           body.style.maxHeight = body.scrollHeight + 'px';
@@ -347,7 +347,6 @@
       const isOpen = el.classList.contains('open');
       el.style.overflow = 'hidden';
       if (isOpen){
-        // из текущей высоты анимируем до нуля
         el.style.maxHeight = el.scrollHeight + 'px';
         requestAnimationFrame(()=>{
           el.style.maxHeight = '0px';
@@ -355,7 +354,6 @@
           el.setAttribute('aria-hidden','true');
         });
       } else {
-        // раскрываем и сразу устанавливаем точную высоту
         el.classList.add('open');
         el.removeAttribute('hidden');
         el.setAttribute('aria-hidden','false');
@@ -379,8 +377,6 @@
       // подсказка столбцов
       if (btnH && hint){
         btnH.onclick = ()=> slideToggle(hint);
-        // когда подсказка анимируется, тело аккордеона уже в режиме max-height:none,
-        // поэтому ничего не режется. Отдельного пересчёта не требуется.
       }
 
       // drag&drop
