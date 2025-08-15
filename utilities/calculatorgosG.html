@@ -1,0 +1,303 @@
+<section class="util" data-util-id="calculatorgosG">
+  <!-- Заголовок-аккордеон -->
+  <button class="util-accordion" id="gosg-toggle" aria-expanded="false" aria-controls="gosg-body">
+    <span class="title">Калькулятор гос. пошлины для судов общей юрисдикции</span>
+    <span class="chev" aria-hidden="true">ˬ</span>
+  </button>
+
+  <!-- По умолчанию закрыто -->
+  <div id="gosg-body" class="util-body" aria-hidden="true">
+    <div class="util-card">
+      <div class="gosg-wrap">
+        <div class="gosg-grid">
+
+          <!-- LEFT: inputs -->
+          <div>
+            <fieldset class="gosg-fieldset">
+              <legend>Кто подаёт</legend>
+              <div class="gosg-radio">
+                <label><input type="radio" name="gosg-applicant" value="fl" checked> Физическое лицо</label>
+                <label><input type="radio" name="gosg-applicant" value="ul"> Организация</label>
+              </div>
+            </fieldset>
+
+            <fieldset class="gosg-fieldset gosg-mt12">
+              <legend>Категория обращения</legend>
+              <label for="gosg-category">Выберите подпункт</label>
+              <select id="gosg-category" class="gosg-input">
+                <optgroup label="Исковые / адм. исковые">
+                  <option value="1">1) Имущественный (подлежит оценке) — шкала</option>
+                  <option value="3">3) Неоцениваемый имущественный / неимущественный</option>
+                  <option value="4">4) Споры по договору без возврата/присуждения; недействительность без последствий</option>
+                  <option value="5">5) Расторжение брака</option>
+                </optgroup>
+                <optgroup label="Приказное производство">
+                  <option value="2">2) Судебный приказ (50% от подп. 1)</option>
+                </optgroup>
+                <optgroup label="Оспаривание актов / действий">
+                  <option value="6">6) Оспаривание НПА и актов с норм. свойствами</option>
+                  <option value="7">7) Оспаривание ненормативных актов, решений и действий (бездействия)</option>
+                </optgroup>
+                <optgroup label="Особое производство / прочее">
+                  <option value="8">8) Особое производство</option>
+                  <option value="9">9) Правопреемство (кроме универсального)</option>
+                  <option value="10">10) ИЛ по третейскому / признание и исп. иностранных решений (30% от подп. 1)</option>
+                  <option value="11">11) Отмена решения третейского суда (по подп. 1)</option>
+                  <option value="12">12) Дубликат ИЛ / пересмотр заочного решения</option>
+                  <option value="13">13) Срок, отсрочка/рассрочка, способ/порядок, поворот, разъяснение</option>
+                  <option value="14">14) Пересмотр по новым или вновь открывшимся</option>
+                  <option value="15">15) Обеспечение иска / замена / отмена (кроме предварительных по ИС в сети)</option>
+                  <option value="16">16) Взыскание алиментов</option>
+                  <option value="17">17) Компенсация за нарушение разумного срока</option>
+                  <option value="18">18) Компенсация за условия содержания под стражей/в ИУ</option>
+                </optgroup>
+                <optgroup label="Жалобы">
+                  <option value="19">19) Апелляционная / частная; кассационная на судебный приказ</option>
+                  <option value="20">20) Кассационная жалоба</option>
+                  <option value="21">21) Кассация/надзор в ВС РФ; жалоба на отказ судьи ВС</option>
+                </optgroup>
+              </select>
+
+              <div id="gosg-amountWrap" class="gosg-mt12 hidden">
+                <label for="gosg-amount">Цена иска / подтверждённая / оспариваемая сумма (₽)</label>
+                <input id="gosg-amount" class="gosg-input" type="number" min="0" step="1" placeholder="Например, 2 500 000" />
+                <div class="hint">Используется для подп. 1, 2 (через подп. 1), 10 и 11.</div>
+              </div>
+
+              <div id="gosg-alimonyWrap" class="gosg-mt12 hidden">
+                <label class="gosg-row"><input type="checkbox" id="gosg-alimonyDouble"> Взыскиваются алименты и на детей, и на истца (удвоить)</label>
+                <div class="hint">Для подп. 16: при одновременном взыскании на детей и на истца пошлина ×2.</div>
+              </div>
+            </fieldset>
+
+            <button id="gosg-calcBtn" class="gosg-btn gosg-mt16">Рассчитать</button>
+          </div>
+
+          <!-- RIGHT: result -->
+          <div>
+            <div class="gosg-result">
+              <div class="gosg-row" style="justify-content:space-between; align-items:flex-start">
+                <div>
+                  <div class="hint">Итого пошлина</div>
+                  <div class="gosg-sum" id="gosg-sum">—</div>
+                </div>
+                <button id="gosg-copyBtn" class="gosg-btn ghost" title="Скопировать сумму">Скопировать</button>
+              </div>
+
+              <div class="gosg-mt12 gosg-breakdown" id="gosg-breakdown">Выберите категорию и заполните поля для расчёта.</div>
+
+              <div class="gosg-footer">
+                ⚠️ Вспомогательный расчёт по указанным правилам. Учитывайте актуальность норм, льготы/освобождения и особые случаи.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div> <!-- /.util-card -->
+  </div> <!-- /#gosg-body -->
+
+  <style>
+    /* анти-переполнение и единый стиль */
+    .util, .util * { box-sizing:border-box; max-width:100%; }
+    .util{ overflow-x:hidden; }
+    .util p, .util li, .util code { word-break:break-word; overflow-wrap:anywhere; white-space:normal; }
+
+    .util-accordion{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+      border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color); color:var(--tg-theme-text-color);
+      padding:12px; border-radius:14px; cursor:pointer; }
+    .util-accordion .title{ font-weight:600; }
+    .util-accordion .chev{ font-size:1em; transition:transform .2s ease; }
+    .util-body{ overflow:hidden; transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; margin-top:6px; }
+    .util-body.open{ opacity:1; }
+    .util-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:10px; }
+
+    /* локальные стили калькулятора СОЮ */
+    .gosg-wrap{ display:block; }
+    .gosg-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+    @media(min-width:880px){ .gosg-grid{ grid-template-columns:1.1fr 1.2fr; } }
+
+    .gosg-fieldset{ border:1px dashed var(--separator); padding:12px; border-radius:12px; }
+    .gosg-fieldset legend{ color:var(--tg-theme-hint-color); font-size:12px; padding:0 6px; }
+    .gosg-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .gosg-radio{ display:flex; gap:12px; flex-wrap:wrap; }
+    .gosg-radio label{ font-weight:500; }
+    .gosg-radio input{ margin-right:6px; }
+    .gosg-input, .gosg-btn, select, input[type="number"], input[type="text"]{
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--separator);
+      background:var(--tg-theme-bg-color); color:var(--tg-theme-text-color); outline:none; transition:.15s ease;
+    }
+    .gosg-input:focus, select:focus, input:focus{ border-color:var(--app-accent); box-shadow:0 0 0 3px rgba(91,157,255,.2); }
+    .gosg-btn{ background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); border-color:transparent; cursor:pointer; }
+    .gosg-btn.ghost{ background:transparent; border:1px solid var(--separator); color:var(--tg-theme-text-color); }
+
+    .gosg-result{ background:var(--tg-theme-bg-color); border:1px solid var(--separator); border-radius:14px; padding:16px; }
+    .gosg-sum{ font-size:28px; font-weight:800; }
+    .gosg-breakdown{ font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .gosg-footer{ color:var(--tg-theme-hint-color); font-size:12px; margin-top:12px; }
+
+    .hidden{ display:none !important; }
+    .gosg-mt8{ margin-top:8px; } .gosg-mt12{ margin-top:12px; } .gosg-mt16{ margin-top:16px; }
+  </style>
+
+  <script type="text/plain" id="calculatorgosG-inline-js">
+  (function(){
+    // ===== Аккордеон (по умолчанию закрыт). После открытия max-height -> none, чтобы не резать контент
+    (function(){
+      const btn  = document.getElementById('gosg-toggle');
+      const body = document.getElementById('gosg-body');
+      if (!btn || !body) return;
+
+      function open(){
+        btn.setAttribute('aria-expanded','true');
+        body.setAttribute('aria-hidden','false');
+        body.classList.add('open');
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = body.scrollHeight + 'px';
+        const onEnd = ()=>{ body.style.maxHeight = 'none'; body.style.overflow = 'visible'; body.removeEventListener('transitionend', onEnd); };
+        body.addEventListener('transitionend', onEnd);
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(180deg)';
+      }
+      function close(){
+        btn.setAttribute('aria-expanded','false');
+        body.setAttribute('aria-hidden','true');
+        body.classList.remove('open');
+        const current = body.style.maxHeight === 'none' ? body.scrollHeight : parseFloat(body.style.maxHeight||0);
+        body.style.overflow = 'hidden';
+        body.style.maxHeight = (current||body.scrollHeight) + 'px';
+        void body.offsetHeight; body.style.maxHeight = '0px';
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(0deg)';
+      }
+      // старт — закрыто
+      close();
+      btn.addEventListener('click', ()=> (btn.getAttribute('aria-expanded')==='true' ? close() : open()) );
+      window.addEventListener('resize', ()=>{
+        if (btn.getAttribute('aria-expanded') === 'true' && body.style.maxHeight !== 'none'){
+          body.style.maxHeight = body.scrollHeight + 'px';
+        }
+      });
+    })();
+
+    // ===== Логика калькулятора (адаптирована из присланного кода; префиксы gosg-)
+    const $ = (s)=>document.querySelector(s);
+    const fmt = (n)=> new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(Math.round(n||0));
+
+    const categoryEl   = $('#gosg-category');
+    const amountWrap   = $('#gosg-amountWrap');
+    const amountEl     = $('#gosg-amount');
+    const alimonyWrap  = $('#gosg-alimonyWrap');
+    const alimonyDouble= $('#gosg-alimonyDouble');
+    const sumEl        = $('#gosg-sum');
+    const breakdownEl  = $('#gosg-breakdown');
+    const copyBtn      = $('#gosg-copyBtn');
+
+    function applicant(){
+      return (document.querySelector('input[name="gosg-applicant"]:checked')||{}).value || 'fl';
+    }
+    function needAmount(cat){ return ['1','2','10','11'].includes(cat); }
+    function toggleVisibility(){
+      const cat = categoryEl.value;
+      amountWrap.classList.toggle('hidden', !needAmount(cat));
+      alimonyWrap.classList.toggle('hidden', cat !== '16');
+    }
+
+    // Подп.1 — шкала СОЮ
+    function calcScale(sum){
+      const s = Number(sum||0);
+      if (!isFinite(s) || s<=0) return {fee:0, parts:['Сумма не указана.']};
+      let fee=0, parts=[], capped=false;
+      if (s <= 100000){ fee = 4000; parts.push('до 100 000 ₽ → 4 000 ₽'); }
+      else if (s <= 300000){ fee = 4000 + 0.03*(s-100000); parts.push('4 000 ₽ + 3% сверх 100 000 ₽'); }
+      else if (s <= 500000){ fee = 10000 + 0.025*(s-300000); parts.push('10 000 ₽ + 2,5% сверх 300 000 ₽'); }
+      else if (s <= 1000000){ fee = 15000 + 0.02*(s-500000); parts.push('15 000 ₽ + 2% сверх 500 000 ₽'); }
+      else if (s <= 3000000){ fee = 25000 + 0.01*(s-1000000); parts.push('25 000 ₽ + 1% сверх 1 000 000 ₽'); }
+      else if (s <= 8000000){ fee = 45000 + 0.007*(s-3000000); parts.push('45 000 ₽ + 0,7% сверх 3 000 000 ₽'); }
+      else if (s <= 24000000){ fee = 80000 + 0.0035*(s-8000000); parts.push('80 000 ₽ + 0,35% сверх 8 000 000 ₽'); }
+      else if (s <= 50000000){ fee = 136000 + 0.003*(s-24000000); parts.push('136 000 ₽ + 0,3% сверх 24 000 000 ₽'); }
+      else if (s <= 100000000){ fee = 214000 + 0.002*(s-50000000); parts.push('214 000 ₽ + 0,2% сверх 50 000 000 ₽'); }
+      else { fee = 314000 + 0.0015*(s-100000000); parts.push('314 000 ₽ + 0,15% сверх 100 000 000 ₽ (потолок 900 000 ₽)'); }
+      if (fee > 900000){ fee = 900000; capped=true; }
+      return {fee:Math.round(fee), parts, capped};
+    }
+
+    function calc(){
+      const cat = categoryEl.value;
+      const who = applicant();
+      const isFL = who==='fl';
+      const amt = Number(amountEl.value||0);
+
+      let total=0, explain=[];
+
+      switch(cat){
+        case '1': {
+          const r = calcScale(amt); total = r.fee;
+          explain.push('Подп. 1: расчёт по шкале для имущественных требований.');
+          explain.push('Формула: ' + r.parts.join(' → '));
+          if (r.capped) explain.push('Применён общий потолок 900 000 ₽.');
+          break;
+        }
+        case '2': {
+          const base = calcScale(amt).fee; total = Math.round(0.5*base);
+          explain.push('Подп. 2: 50% от пошлины по подп. 1 (по цене иска).');
+          explain.push(`База по подп. 1: ${fmt(base)} → 50% = ${fmt(total)}`);
+          break;
+        }
+        case '3': { total = isFL ? 3000 : 20000; explain.push('Подп. 3: фиксированная — ФЛ 3 000 ₽, ЮЛ 20 000 ₽.'); break; }
+        case '4': { total = isFL ? 3000 : 20000; explain.push('Подп. 4: фиксированная — ФЛ 3 000 ₽, ЮЛ 20 000 ₽.'); break; }
+        case '5': { total = 5000; explain.push('Подп. 5: расторжение брака — 5 000 ₽.'); break; }
+        case '6': { total = isFL ? 4000 : 20000; explain.push('Подп. 6: фиксированная — ФЛ 4 000 ₽, ЮЛ 20 000 ₽.'); break; }
+        case '7': { total = isFL ? 3000 : 15000; explain.push('Подп. 7: фиксированная — ФЛ 3 000 ₽, ЮЛ 15 000 ₽.'); break; }
+        case '8': { total = 3000; explain.push('Подп. 8: особое производство — 3 000 ₽.'); break; }
+        case '9': { total = isFL ? 2000 : 15000; explain.push('Подп. 9: фиксированная — ФЛ 2 000 ₽, ЮЛ 15 000 ₽.'); break; }
+        case '10': {
+          const base = calcScale(amt).fee; total = Math.round(0.3*base);
+          explain.push('Подп. 10: 30% от пошлины по подп. 1 от подтверждённой суммы.');
+          explain.push(`База по подп. 1: ${fmt(base)} → 30% = ${fmt(total)}`);
+          break;
+        }
+        case '11': {
+          const r = calcScale(amt); total = r.fee;
+          explain.push('Подп. 11: по правилам подп. 1 от оспариваемой суммы.');
+          explain.push('Формула: ' + r.parts.join(' → '));
+          if (r.capped) explain.push('Применён общий потолок 900 000 ₽.');
+          break;
+        }
+        case '12': { total = 1500; explain.push('Подп. 12: фиксированная 1 500 ₽.'); break; }
+        case '13': { total = 3000; explain.push('Подп. 13: фиксированная 3 000 ₽.'); break; }
+        case '14': { total = 10000; explain.push('Подп. 14: фиксированная 10 000 ₽.'); break; }
+        case '15': { total = 10000; explain.push('Подп. 15: фиксированная 10 000 ₽.'); break; }
+        case '16': { total = 150; if (alimonyDouble.checked) total *= 2; explain.push('Подп. 16: алименты — 150 ₽; при взыскании и на детей, и на истца — ×2.'); break; }
+        case '17': { total = isFL ? 300 : 6000; explain.push('Подп. 17: фиксированная — ФЛ 300 ₽, ЮЛ 6 000 ₽.'); break; }
+        case '18': { total = 300; explain.push('Подп. 18: фиксированная 300 ₽.'); break; }
+        case '19': { total = isFL ? 3000 : 15000; explain.push('Подп. 19: фиксированная — ФЛ 3 000 ₽, ЮЛ 15 000 ₽.'); break; }
+        case '20': { total = isFL ? 5000 : 20000; explain.push('Подп. 20: фиксированная — ФЛ 5 000 ₽, ЮЛ 20 000 ₽.'); break; }
+        case '21': { total = isFL ? 7000 : 25000; explain.push('Подп. 21: фиксированная — ФЛ 7 000 ₽, ЮЛ 25 000 ₽.'); break; }
+        default: total=0; explain.push('Выберите подпункт.');
+      }
+
+      sumEl.textContent = fmt(total);
+      breakdownEl.textContent = explain.join('\n');
+    }
+
+    // events
+    document.querySelectorAll('input[name="gosg-applicant"]').forEach(r=>r.addEventListener('change', ()=>{}));
+    document.getElementById('gosg-category').addEventListener('change', toggleVisibility);
+    document.getElementById('gosg-calcBtn').addEventListener('click', calc);
+    document.getElementById('gosg-copyBtn').addEventListener('click', ()=>{
+      const txt = (document.getElementById('gosg-sum').textContent||'').trim();
+      navigator.clipboard.writeText(txt).then(()=>{
+        const b = document.getElementById('gosg-copyBtn');
+        b.textContent='Скопировано!'; setTimeout(()=> b.textContent='Скопировать', 1200);
+      }).catch(()=>{
+        const b = document.getElementById('gosg-copyBtn');
+        b.textContent='Не удалось'; setTimeout(()=> b.textContent='Скопировать', 1200);
+      });
+    });
+
+    // init
+    toggleVisibility();
+  })();
+  </script>
+</section>

@@ -1,7 +1,6 @@
 <section class="page profile" id="profile-page" aria-labelledby="profile-title">
   <h1 id="profile-title">Профиль / Утилиты</h1>
 
-  <!-- Здесь будут смонтированы утилиты (экспорт/импорт и калькулятор) -->
   <div id="profile-utility-outlet" class="util-outlet" role="region" aria-label="Область утилит"></div>
 
   <style>
@@ -13,9 +12,9 @@
   <script type="text/plain" id="profile-inline-js">
   (function(){
     const CACHE = new Map();
-    const UTIL_IDS = ['exportimport','calculatorgos']; // порядок показа
+    // ВАЖНО: имена файлов в /utilities/
+    const UTIL_IDS = ['exportimport', 'calculatorgos', 'calculatorgosG'];
 
-    // Абсолютный корень проекта (где index.html)
     function getProjectRoot(){
       const url = new URL(location.href);
       let dir = url.pathname;
@@ -49,18 +48,18 @@
         outlet.innerHTML = htmlParts.join('\n');
         runInlineScripts(outlet);
 
-        // Если в хеше указана конкретная утилита — раскроем её и проскроллим
+        // раскрыть нужную утилиту по хешу
         const m = location.hash.match(/util=([\w-]+)/);
         const util = m ? m[1] : null;
         const toggleIdMap = {
           exportimport: 'exim-toggle',
-          calculatorgos: 'gos-toggle'
+          calculatorgos: 'gos-toggle',
+          calculatorgosG: 'gosg-toggle'
         };
         if (util && toggleIdMap[util]){
           const btn = document.getElementById(toggleIdMap[util]);
           if (btn && btn.getAttribute('aria-expanded') !== 'true'){
             btn.click();
-            // мягкий скролл к секции
             setTimeout(()=>{ btn.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
           }
         }
