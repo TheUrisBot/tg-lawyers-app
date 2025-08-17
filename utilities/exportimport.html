@@ -24,11 +24,11 @@
       <!-- Импорт -->
       <div class="import-wrap">
         <label class="file-label">
-          <span>Файл Excel/CSV</span>
-          <input type="file" id="exim-file" accept=".xlsx,.xls,.csv" />
+          <span>Файл Excel (.xlsx) или CSV</span>
+          <input id="exim-file" type="file" accept=".xlsx,.xls,.csv" />
         </label>
 
-        <div id="dropzone" class="dropzone" aria-label="Перетащи файл сюда">
+        <div id="dropzone" class="dropzone" aria-label="Перетащи файл для импорта">
           Перетащи файл сюда или выбери его выше
         </div>
 
@@ -37,17 +37,17 @@
           <button class="ghost" id="btn-cols-hint">Какие столбцы поддерживаются?</button>
         </div>
 
-        <!-- Подсказка по столбцам (строго 6 полей) -->
+        <!-- Подсказка по столбцам -->
         <div id="cols-hint" class="hint-collapse" aria-hidden="true">
           <div class="hint-scroll">
             <p class="muted" style="margin-top:0">
-              Поддерживаются <strong>ровно</strong> следующие заголовки (регистр не важен):
+              Поддерживаются следующие заголовки (регистр не важен):
             </p>
             <ul class="no-overflow">
-              <li><code>Номер дела</code></li>
+              <li><code>Номер дела</code> <strong>(обязателен)</strong></li>
               <li><code>Должник</code></li>
               <li><code>ИНН</code></li>
-              <li><code>Суд</code></li>
+              <li><code>Суд</code> <span class="muted">— необязателен, определяется автоматически по номеру</span></li>
               <li><code>Примечание</code></li>
               <li><code>Статус</code></li>
             </ul>
@@ -64,16 +64,15 @@
 
         <button class="ghost small" id="btn-toggle-list">Показать список затронутых дел</button>
         <div id="affected-list" class="list-collapse" hidden>
-          <div class="list-scroll" id="affected-scroll"></div>
+          <ul id="affected-ul"></ul>
         </div>
       </div>
     </div>
   </div>
 
   <style>
-    /* защита от горизонтального переполнения */
-    .util, .util * { box-sizing: border-box; max-width: 100%; }
-    .util{ overflow-x:hidden; }
+    .util{ display:block; }
+    .util .no-overflow { padding-left:18px; margin:6px 0; }
     .util p, .util li, .util code { word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
 
     .util-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
@@ -102,28 +101,25 @@
     .util-accordion .title{ font-weight:600; }
     .util-accordion .chev{ font-size:1em; transition:transform .2s ease; }
 
-    /* Анимация контейнера: закрыт по умолчанию */
+    /* Тело аккордеона закрыто по умолчанию */
     .util-body{ overflow:hidden; transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; margin-top:6px; }
     .util-body.open{ opacity:1; }
 
-    /* Подсказка-коллапс */
-    .hint-collapse{ border:1px solid var(--separator); border-radius:12px; overflow:hidden;
-      transition:max-height .24s ease, opacity .24s ease; max-height:0; opacity:0; }
-    .hint-collapse.open{ opacity:1; }
-    .hint-scroll{ max-height:220px; overflow:auto; padding:8px; }
-    .hint-scroll ul{ margin:0; padding-inline-start:18px; }
-
-    /* Список затронутых дел */
-    .list-collapse{ border-top:1px dashed var(--separator); margin-top:8px; }
-    .list-scroll{ max-height:220px; overflow:auto; padding:8px 0; }
-    .result-line{ margin:2px 0; }
+    /* hint/list collapses */
+    .hint-collapse{ border:1px dashed var(--separator); border-radius:12px; padding:10px; margin-top:6px; display:none; }
+    .hint-collapse.open{ display:block; }
+    .hint-scroll{ max-height:220px; overflow:auto; }
+    .list-collapse{ display:none; }
+    .list-collapse.open{ display:block; }
+    #affected-ul{ margin:6px 0 0 0; padding:0 0 0 18px; }
   </style>
 
+  <!-- ВАЖНО: скрипт в формате, как в других вкладках (text/plain) -->
   <script type="text/plain" id="exportimport-inline-js">
   (function(){
     const LS_CASES = 'tl_cases_v1';
 
-    // ===== Аккордеон: по умолчанию закрыт. При открытии после анимации ставим max-height:none
+    // ===== Аккордеон (по умолчанию закрыт)
     (function(){
       const btn  = document.getElementById('exim-toggle');
       const body = document.getElementById('exim-body');
@@ -136,37 +132,20 @@
 
         body.style.overflow = 'hidden';
         body.style.maxHeight = body.scrollHeight + 'px';
-
         const onEnd = ()=>{ body.style.maxHeight = 'none'; body.style.overflow = 'visible'; body.removeEventListener('transitionend', onEnd); };
         body.addEventListener('transitionend', onEnd);
-        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(180deg)';
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform='rotate(180deg)';
       }
-
       function close(){
         btn.setAttribute('aria-expanded','false');
         body.setAttribute('aria-hidden','true');
         body.classList.remove('open');
-
-        // если было 'none', вернёмся к числу и анимируем к 0
-        const current = body.style.maxHeight === 'none' ? body.scrollHeight : parseFloat(body.style.maxHeight||0);
-        body.style.overflow = 'hidden';
-        body.style.maxHeight = (current||body.scrollHeight) + 'px';
-        // принудительный reflow
-        void body.offsetHeight;
-        body.style.maxHeight = '0px';
-
-        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform = 'rotate(0deg)';
+        const chev = btn.querySelector('.chev'); if (chev) chev.style.transform='';
+        body.style.maxHeight = body.scrollHeight + 'px';
+        requestAnimationFrame(()=>{ body.style.maxHeight = '0px'; body.style.overflow='hidden'; });
       }
-
-      // старт: ЗАКРЫТО
-      close();
-
-      btn.addEventListener('click', ()=>{
-        const isOpen = btn.getAttribute('aria-expanded') === 'true';
-        if (isOpen) close(); else open();
-      });
-
-      // если окно ресайзнули и тело в режиме «анимация открытия», подправим
+      btn.addEventListener('click', ()=> (btn.getAttribute('aria-expanded')==='true'? close():open()));
+      // подстраиваем max-height во время ресайза
       window.addEventListener('resize', ()=>{
         if (btn.getAttribute('aria-expanded') === 'true' && body.style.maxHeight !== 'none'){
           body.style.maxHeight = body.scrollHeight + 'px';
@@ -195,6 +174,103 @@
       });
     }
 
+    // === Автоопределение суда по номеру дела (укороченная карта; при желании расширим)
+    const PREFIX_TO_COURT = {
+      'А01-': 'АС Респ. Адыгея',
+      'А02-': 'АС Респ. Алтай',
+      'А03-': 'АС Алтайского края',
+      'А04-': 'АС Амурской обл.',
+      'А05-': 'АС Архангельской обл.',
+      'А06-': 'АС Астраханской обл.',
+      'А07-': 'АС Респ. Башкортостан',
+      'А08-': 'АС Белгородской обл.',
+      'А09-': 'АС Брянской обл.',
+      'А10-': 'АС Респ. Бурятия',
+      'А11-': 'АС Владимирской обл.',
+      'А12-': 'АС Волгоградской обл.',
+      'А13-': 'АС Вологодской обл.',
+      'А14-': 'АС Воронежской обл.',
+      'А15-': 'АС Еврейской АО',
+      'А16-': 'АС Забайкальского края',
+      'А17-': 'АС Ивановской обл.',
+      'А18-': 'АС Иркутской обл.',
+      'А19-': 'АС Кабардино-Балкарской Респ.',
+      'А20-': 'АС Калининградской обл.',
+      'А21-': 'АС Калужской обл.',
+      'А22-': 'АС Камчатского края',
+      'А23-': 'АС Карачаево-Черкесской Респ.',
+      'А24-': 'АС Респ. Карелия',
+      'А25-': 'АС Кемеровской обл.',
+      'А26-': 'АС Кировской обл.',
+      'А27-': 'АС Респ. Коми',
+      'А28-': 'АС Костромской обл.',
+      'А29-': 'АС Архангельской обл.',
+      'А31-': 'АС Белгородской обл.',
+      'А32-': 'АС Краснодарского края',
+      'А33-': 'АС Красноярского края',
+      'А34-': 'АС Курганской обл.',
+      'А35-': 'АС Курской обл.',
+      'А36-': 'АС Липецкой обл.',
+      'А37-': 'АС Магаданской обл.',
+      'А38-': 'АС Респ. Марий Эл',
+      'А39-': 'АС Респ. Мордовия',
+      'А40-': 'АС г. Москвы',
+      'А41-': 'АС Моск. обл.',
+      'А42-': 'АС Мурманской обл.',
+      'А43-': 'АС Нижегородской обл.',
+      'А44-': 'АС Новгородской обл.',
+      'А45-': 'АС Новосибирской обл.',
+      'А46-': 'АС Омской обл.',
+      'А47-': 'АС Оренбургской обл.',
+      'А48-': 'АС Орловской обл.',
+      'А49-': 'АС Пензенской обл.',
+      'А50-': 'АС Пермского края',
+      'А51-': 'АС Приморского края',
+      'А52-': 'АС Псковской обл.',
+      'А53-': 'АС Ростовской обл.',
+      'А54-': 'АС Рязанской обл.',
+      'А55-': 'АС Самарской обл.',
+      'А56-': 'АС г. Санкт-Петербурга и Лен. обл.',
+      'А57-': 'АС Саратовской обл.',
+      'А58-': 'АС Респ. Саха (Якутия)',
+      'А59-': 'АС Сахалинской обл.',
+      'А60-': 'АС Свердловской обл.',
+      'А61-': 'АС Смоленской обл.',
+      'А62-': 'АС Ставропольского края',
+      'А63-': 'АС Тамбовской обл.',
+      'А64-': 'АС Тверской обл.',
+      'А65-': 'АС Томской обл.',
+      'А66-': 'АС Тульской обл.',
+      'А67-': 'АС Тюменской обл.',
+      'А68-': 'АС Ульяновской обл.',
+      'А69-': 'АС Хабаровского края',
+      'А70-': 'АС Ханты-Мансийского АО',
+      'А71-': 'АС Челябинской обл.',
+      'А72-': 'АС Чеченской Респ.',
+      'А73-': 'АС Чувашской Респ.',
+      'А74-': 'АС Чукотского АО',
+      'А75-': 'АС Ямало-Ненецкого АО',
+      'А76-': 'АС Ярославской обл.'
+    };
+    function normalizeCaseNumber(s){
+      return String(s||'')
+        .toUpperCase()
+        .replace(/[A]/g,'А')        // латинская A -> кириллическая А
+        .replace(/[—−–]/g,'-')      // все варианты тире -> дефис
+        .replace(/\s+/g,'');        // убрать пробелы
+    }
+    function guessCourtByNumber(num){
+      const n = normalizeCaseNumber(num);
+      for (const pref in PREFIX_TO_COURT){
+        if (Object.prototype.hasOwnProperty.call(PREFIX_TO_COURT, pref) && n.startsWith(pref)){
+          return PREFIX_TO_COURT[pref];
+        }
+      }
+      const m = n.match(/^А\d{2}-/);
+      if (m && PREFIX_TO_COURT[m[0]]) return PREFIX_TO_COURT[m[0]];
+      return '';
+    }
+
     // ===== Экспорт
     async function exportXLSX(){
       const data = readCases();
@@ -207,10 +283,12 @@
         'Статус':     i.status || 'active',
       }));
       const XLSX = await ensureXLSX();
-      const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Дела');
-      XLSX.writeFile(wb, 'cases_export.xlsx');
+      const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+      const blob = new Blob([wbout], {type:'application/octet-stream'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cases_export.xlsx'; document.body.appendChild(a); a.click(); a.remove();
     }
     function exportCSV(){
       const data = readCases();
@@ -223,7 +301,7 @@
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cases_export.csv'; document.body.appendChild(a); a.click(); a.remove();
     }
 
-    // ===== Импорт (строго 6 русских заголовков)
+    // ===== Импорт
     function parseCSV(text){
       const rows = text.replace(/\r/g,'').split('\n').filter(Boolean)
         .map(r=>r.split(';').map(s=>s.replace(/^"|"$/g,'').replace(/""/g,'"')));
@@ -257,7 +335,7 @@
             number: m['номер дела'] || '',
             debtor: m['должник'] || '',
             inn:    m['инн'] || '',
-            court:  m['суд'] || '',
+            court:  '', // из файла не берём
             note:   m['примечание'] || '',
             status: normalizeStatus(m['статус']),
           };
@@ -268,7 +346,6 @@
         const idxNumber = headerIndex(head, ['номер дела']);
         const idxDebtor = headerIndex(head, ['должник']);
         const idxINN    = headerIndex(head, ['инн']);
-        const idxCourt  = headerIndex(head, ['суд']);
         const idxNote   = headerIndex(head, ['примечание']);
         const idxStatus = headerIndex(head, ['статус']);
 
@@ -276,7 +353,7 @@
           number: idxNumber>=0 ? r[idxNumber] : '',
           debtor: idxDebtor>=0 ? r[idxDebtor] : '',
           inn:    idxINN>=0 ? r[idxINN] : '',
-          court:  idxCourt>=0 ? r[idxCourt] : '',
+          court:  '', // из файла не берём
           note:   idxNote>=0 ? r[idxNote] : '',
           status: normalizeStatus(idxStatus>=0 ? r[idxStatus] : ''),
         })).filter(x=>x.number);
@@ -284,6 +361,8 @@
         alert('Поддерживаются файлы .xlsx и .csv'); return;
       }
 
+      // === Автоматически определить суд по номеру дела ===
+      for (const r of rows){ r.court = guessCourtByNumber(r.number); }
       if (!rows.length){ alert('Файл пуст или не распознан'); return; }
 
       const data = readCases();
@@ -295,7 +374,7 @@
         if (existing){
           existing.debtor = r.debtor ?? existing.debtor;
           existing.inn    = r.inn ?? existing.inn;
-          existing.court  = r.court ?? existing.court;
+          existing.court  = r.court || existing.court;
           existing.note   = r.note ?? existing.note;
           existing.status = r.status || existing.status || 'active';
           existing.updatedAt = Date.now();
@@ -320,44 +399,30 @@
     }
 
     // ===== UI wiring
-    function showResult({added, updated, total, affected}){
-      const wrap = document.getElementById('import-result'); if (!wrap) return;
-      wrap.hidden = false;
-      const a = document.getElementById('res-added');   if (a) a.textContent = String(added);
-      const u = document.getElementById('res-updated'); if (u) u.textContent = String(updated);
-      const t = document.getElementById('res-total');   if (t) t.textContent = String(total);
-
-      const list = document.getElementById('affected-scroll');
-      if (list){
-        list.innerHTML = affected.map(x=>`<div>${x.type==='add'?'➕ добавлено':'✏️ обновлено'} — <strong>${x.number}</strong></div>`).join('') || '<div class="muted">Нет изменений</div>';
-      }
-      const lc = document.getElementById('affected-list'); if (lc) lc.hidden = true;
-      const btn = document.getElementById('btn-toggle-list');
-      if (btn){
-        btn.textContent = 'Показать список затронутых дел';
-        btn.onclick = ()=>{
-          const open = lc && lc.hidden;
-          if (lc) lc.hidden = !open;
-          btn.textContent = open ? 'Скрыть список' : 'Показать список затронутых дел';
-        };
-      }
-    }
-
     function slideToggle(el){
-      const isOpen = el.classList.contains('open');
-      el.style.overflow = 'hidden';
-      if (isOpen){
-        el.style.maxHeight = el.scrollHeight + 'px';
-        requestAnimationFrame(()=>{
-          el.style.maxHeight = '0px';
-          el.classList.remove('open');
-          el.setAttribute('aria-hidden','true');
-        });
-      } else {
-        el.classList.add('open');
-        el.removeAttribute('hidden');
-        el.setAttribute('aria-hidden','false');
-        el.style.maxHeight = el.scrollHeight + 'px';
+      if (!el) return;
+      if (el.classList.contains('open')) { el.classList.remove('open'); el.setAttribute('aria-hidden','true'); }
+      else { el.classList.add('open'); el.setAttribute('aria-hidden','false'); }
+    }
+    function showResult({added, updated, total, affected}){
+      const res = document.getElementById('import-result');
+      if (!res) return;
+      res.hidden = false;
+      res.querySelector('#res-added').textContent   = String(added);
+      res.querySelector('#res-updated').textContent = String(updated);
+      res.querySelector('#res-total').textContent   = String(total);
+
+      const btn = document.getElementById('btn-toggle-list');
+      const listWrap = document.getElementById('affected-list');
+      const ul = document.getElementById('affected-ul');
+      if (ul){
+        ul.innerHTML = affected.map(a=>`<li>${a.type==='add'?'Добавлено':'Обновлено'}: <code>${a.number}</code></li>`).join('');
+      }
+      if (btn && listWrap){
+        btn.onclick = ()=>{
+          listWrap.hidden = !listWrap.hidden;
+          btn.textContent = listWrap.hidden ? 'Показать список затронутых дел' : 'Скрыть список';
+        };
       }
     }
 
