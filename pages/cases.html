@@ -14,12 +14,12 @@
 
   <!-- Фильтры -->
   <div class="cases-filters" role="tablist" aria-label="Фильтр по типу">
-    <button role="tab" class="chip active" data-filter="all" onclick="CASES && CASES.setFilter('all')">Все</button>
-    <button role="tab" class="chip" data-filter="active" onclick="CASES && CASES.setFilter('active')">Активные</button>
-    <button role="tab" class="chip" data-filter="archived" onclick="CASES && CASES.setFilter('archived')">Архив</button>
+    <button class="chip active" role="tab" aria-selected="true" onclick="CASES && CASES.setFilter('all', this)">Все</button>
+    <button class="chip" role="tab" aria-selected="false" onclick="CASES && CASES.setFilter('active', this)">Активные</button>
+    <button class="chip" role="tab" aria-selected="false" onclick="CASES && CASES.setFilter('archived', this)">Архив</button>
   </div>
 
-  <!-- Форма (сворачиваемая) -->
+  <!-- Форма -->
   <div id="cases-form-wrap" class="collapse" aria-hidden="true">
     <form id="cases-form" class="cases-form" onsubmit="CASES && CASES.submit(event)">
       <div class="grid">
@@ -53,21 +53,21 @@
       </div>
       <div class="form-actions">
         <button type="button" class="ghost" onclick="CASES && CASES.toggleForm(false)">Свернуть</button>
-        <button type="submit" class="primary" id="cases-submit-btn">Сохранить</button>
+        <button type="submit" id="cases-submit-btn" class="primary">Сохранить</button>
       </div>
     </form>
   </div>
 
   <!-- Список -->
-  <div id="cases-list" class="cases-list" role="list"></div>
-  <div class="list-spacer" aria-hidden="true"></div>
+  <div id="cases-list" class="cases-list" role="list" aria-label="Список дел"></div>
 
   <!-- Пустое состояние -->
-  <div id="cases-empty" class="cases-empty" hidden>
-    <div class="emoji" aria-hidden="true">📁</div>
+  <div id="cases-empty" class="cases-empty">
+    <div class="emoji">📂</div>
     <div class="title">Пока нет дел</div>
     <div class="hint">Добавь первое дело — номер, должник (по желанию), суд…</div>
     <button class="primary" onclick="CASES && CASES.toggleForm(true)">Добавить дело</button>
+    <div class="list-spacer"></div>
   </div>
 
   <style>
@@ -95,6 +95,7 @@
     .cases-form input:focus,.cases-form select:focus,.cases-form textarea:focus{ border-color:var(--app-accent); }
     .form-actions{ display:flex; gap:8px; justify-content:flex-end; }
 
+    /* ⬇️ Базовые стили кнопок — как в hearings.html */
     .primary,.ghost{ appearance:none; border:1px solid transparent; padding:10px 12px; border-radius:12px; cursor:pointer;
       background:var(--tg-theme-button-color); color:var(--tg-theme-button-text-color); }
     .ghost{ background:transparent; border-color:var(--separator); color:var(--tg-theme-text-color); }
@@ -108,17 +109,115 @@
     .badge.active{ color:var(--app-accent); border-color:var(--app-accent); }
     .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
     .case-actions{ display:flex; gap:8px; margin-top:6px; }
+    .case-actions .ghost{ border:1px solid var(--separator); background:transparent; border-radius:12px; padding:8px 10px; }
 
-    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
+    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); display:none; }
     .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
     .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
     .list-spacer{ height:16px; }
 
-    @media (max-width:520px){ .cases-form .grid{ grid-template-columns:1fr; } }
+    @media (max-width: 520px){ .cases-form .grid{ grid-template-columns:1fr; } }
   </style>
 
   <script type="text/plain" id="cases-inline-js">
   (function(){
+    /* Сокращённые названия судов по префиксу */
+    const PREFIX_TO_COURT = {
+      'А01-': 'АС Респ. Адыгея',
+      'А02-': 'АС Респ. Алтай',
+      'А03-': 'АС Алтайского края',
+      'А04-': 'АС Амурской обл.',
+      'А05-': 'АС Архангельской обл.',
+      'А06-': 'АС Астраханской обл.',
+      'А07-': 'АС Респ. Башкортостан',
+      'А08-': 'АС Белгородской обл.',
+      'А09-': 'АС Брянской обл.',
+      'А10-': 'АС Респ. Бурятия',
+      'А11-': 'АС Владимирской обл.',
+      'А12-': 'АС Волгоградской обл.',
+      'А13-': 'АС Вологодской обл.',
+      'А14-': 'АС Воронежской обл.',
+      'А15-': 'АС Еврейской АО',
+      'А16-': 'АС Забайкальского края',
+      'А17-': 'АС Ивановской обл.',
+      'А18-': 'АС Иркутской обл.',
+      'А19-': 'АС Кабардино-Балкарской Респ.',
+      'А20-': 'АС Калининградской обл.',
+      'А21-': 'АС Калужской обл.',
+      'А22-': 'АС Камчатского края',
+      'А23-': 'АС Карачаево-Черкесской Респ.',
+      'А24-': 'АС Респ. Карелия',
+      'А25-': 'АС Кемеровской обл.',
+      'А26-': 'АС Кировской обл.',
+      'А27-': 'АС Респ. Коми',
+      'А28-': 'АС Костромской обл.',
+      'А29-': 'АС Архангельской обл.',
+      'А31-': 'АС Белгородской обл.',
+      'А32-': 'АС Краснодарского края',
+      'А33-': 'АС Красноярского края',
+      'А34-': 'АС Курганской обл.',
+      'А35-': 'АС Курской обл.',
+      'А36-': 'АС Липецкой обл.',
+      'А37-': 'АС Магаданской обл.',
+      'А38-': 'АС Респ. Марий Эл',
+      'А39-': 'АС Респ. Мордовия',
+      'А40-': 'АС г. Москвы',
+      'А41-': 'АС Моск. обл.',
+      'А42-': 'АС Мурманской обл.',
+      'А43-': 'АС Нижегородской обл.',
+      'А44-': 'АС Новгородской обл.',
+      'А45-': 'АС Новосибирской обл.',
+      'А46-': 'АС Омской обл.',
+      'А47-': 'АС Оренбургской обл.',
+      'А48-': 'АС Орловской обл.',
+      'А49-': 'АС Пензенской обл.',
+      'А50-': 'АС Пермского края',
+      'А51-': 'АС Приморского края',
+      'А52-': 'АС Псковской обл.',
+      'А53-': 'АС Ростовской обл.',
+      'А54-': 'АС Рязанской обл.',
+      'А55-': 'АС Самарской обл.',
+      'А56-': 'АС г. Санкт-Петербурга и Лен. обл.',
+      'А57-': 'АС Саратовской обл.',
+      'А58-': 'АС Респ. Саха (Якутия)',
+      'А59-': 'АС Сахалинской обл.',
+      'А60-': 'АС Свердловской обл.',
+      'А61-': 'АС Смоленской обл.',
+      'А62-': 'АС Ставропольского края',
+      'А63-': 'АС Тамбовской обл.',
+      'А64-': 'АС Тверской обл.',
+      'А65-': 'АС Томской обл.',
+      'А66-': 'АС Тульской обл.',
+      'А67-': 'АС Тюменской обл.',
+      'А68-': 'АС Ульяновской обл.',
+      'А69-': 'АС Хабаровского края',
+      'А70-': 'АС Ханты-Мансийского АО',
+      'А71-': 'АС Челябинской обл.',
+      'А72-': 'АС Чеченской Респ.',
+      'А73-': 'АС Чувашской Респ.',
+      'А74-': 'АС Чукотского АО',
+      'А75-': 'АС Ямало-Ненецкого АО',
+      'А76-': 'АС Ярославской обл.'
+    };
+
+    function normalizeCaseNumber(s){
+      return String(s||'')
+        .toUpperCase()
+        .replace(/[A]/g,'А')        // латинская A -> кириллическая А
+        .replace(/[—−–]/g,'-')      // все варианты тире -> дефис
+        .replace(/\s+/g,'');        // убрать пробелы
+    }
+    function guessCourtByNumber(num){
+      const n = normalizeCaseNumber(num);
+      for (const pref in PREFIX_TO_COURT){
+        if (Object.prototype.hasOwnProperty.call(PREFIX_TO_COURT, pref) && n.startsWith(pref)){
+          return PREFIX_TO_COURT[pref];
+        }
+      }
+      const m = n.match(/^А\d{2}-/);
+      if (m && PREFIX_TO_COURT[m[0]]) return PREFIX_TO_COURT[m[0]];
+      return '';
+    }
     function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
 
     window.CASES = {
@@ -128,23 +227,30 @@
       editingId: null,
 
       init(){
-        try {
-          const raw = localStorage.getItem(this.LS_KEY);
-          this.data = raw ? JSON.parse(raw) : [];
-          if (!Array.isArray(this.data)) this.data = [];
-        } catch(e){ this.data = []; }
-        this.render();
-      },
+        try{ this.data = JSON.parse(localStorage.getItem(this.LS_KEY)||'[]')||[]; }catch(e){ this.data=[]; }
 
-      save(){ localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
+        const wrap=document.getElementById('cases-form-wrap');
+        const btn=document.getElementById('cases-add-btn');
+        setExpanded(btn, wrap, false);
 
-      setQuery(v){ this.state.query=(v||'').toLowerCase(); this.render(); },
-      setFilter(f){
-        this.state.filter=f;
-        document.querySelectorAll('#cases-page .chip').forEach(ch=>{
-          ch.classList.toggle('active', ch.dataset.filter===f);
-          ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
-        });
+        // Автоподстановка/очистка «Суда» по префиксу
+        const numEl=document.getElementById('c-number');
+        const courtEl=document.getElementById('c-court');
+        const onNumberInput=()=>{
+          if(!numEl || !courtEl) return;
+          const g = guessCourtByNumber(numEl.value);
+          if (g) {
+            courtEl.value = g;
+            courtEl.dataset.autofilled = '1';
+          } else if (courtEl.dataset.autofilled === '1') {
+            courtEl.value = '';
+            delete courtEl.dataset.autofilled;
+          }
+        };
+        numEl?.addEventListener('input', onNumberInput);
+        numEl?.addEventListener('change', onNumberInput);
+        courtEl?.addEventListener('input', ()=>{ delete courtEl.dataset.autofilled; });
+
         this.render();
       },
 
@@ -177,16 +283,18 @@
         document.getElementById('c-debtor').value=item.debtor||'';
         document.getElementById('c-inn').value=item.inn||'';
         document.getElementById('c-court').value=item.court||'';
+        { const el=document.getElementById('c-court'); if(el){ delete el.dataset.autofilled; } }
         document.getElementById('c-note').value=item.note||'';
         document.getElementById('c-status').value=item.status||'active';
         document.getElementById('cases-submit-btn').textContent='Обновить';
-        const wrap=document.getElementById('cases-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
+        this.toggleForm(true);
       },
 
       cancelEdit(){
         this.editingId=null;
         document.getElementById('cases-submit-btn').textContent='Сохранить';
         ['c-number','c-debtor','c-inn','c-court','c-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        { const el=document.getElementById('c-court'); if(el){ delete el.dataset.autofilled; } }
         document.getElementById('c-status').value='active';
       },
 
@@ -195,42 +303,63 @@
         const number=document.getElementById('c-number').value.trim();
         const debtor=document.getElementById('c-debtor').value.trim();
         const inn=document.getElementById('c-inn').value.trim();
-        const court=document.getElementById('c-court').value.trim();
+        let court=document.getElementById('c-court').value.trim();
+        if(!court){ court = guessCourtByNumber(number) || ''; }
         const note=document.getElementById('c-note').value.trim();
         const status=document.getElementById('c-status').value;
-        if(!number){ alert('Укажи номер дела.'); return; }
-        if(inn && !/^\d{10,12}$/.test(inn)){ alert('ИНН должен содержать 10 или 12 цифр. Или оставь пустым.'); return; }
 
+        if(!number){ alert('Укажи номер дела'); return; }
+
+        const now=Date.now();
         if(this.editingId){
           const i=this.data.findIndex(x=>x.id===this.editingId);
-          if(i!==-1) this.data[i]={...this.data[i], number, debtor, inn, court, note, status, updatedAt:Date.now()};
-        } else {
-          this.data.push({ id:String(Date.now()), number, debtor, inn, court, note, status: status==='archived'?'archived':'active', createdAt:Date.now(), updatedAt:Date.now() });
+          if(i!==-1) this.data[i]={...this.data[i], number, debtor, inn, court, note,
+            status, updatedAt: now};
+        }else{
+          this.data.unshift({
+            id: crypto.randomUUID(),
+            number, debtor, inn, court, note, status,
+            createdAt: now, updatedAt: now
+          });
         }
-        this.save();
+
+        localStorage.setItem(this.LS_KEY, JSON.stringify(this.data));
         this.cancelEdit();
+        this.render();
         this.toggleForm(false);
+      },
+
+      remove(id){
+        if(!confirm('Удалить дело?')) return;
+        this.data = this.data.filter(x=>x.id!==id);
+        localStorage.setItem(this.LS_KEY, JSON.stringify(this.data));
         this.render();
       },
 
-      toggleArchive(id){
+      archive(id, toArchive){
         const item=this.data.find(x=>x.id===id); if(!item) return;
-        item.status = item.status==='active' ? 'archived' : 'active';
-        item.updatedAt=Date.now(); this.save(); this.render();
+        item.status = toArchive ? 'archived' : 'active';
+        item.updatedAt = Date.now();
+        localStorage.setItem(this.LS_KEY, JSON.stringify(this.data));
+        this.render();
       },
-      remove(id){
-        if(!confirm('Удалить дело?')) return;
-        this.data=this.data.filter(x=>x.id!==id); this.save(); this.render();
+
+      setQuery(q){ this.state.query=String(q||''); this.render(); },
+      setFilter(f, el){
+        this.state.filter=f;
+        document.querySelectorAll('.cases-filters .chip').forEach(b=>b.classList.remove('active'));
+        el?.classList.add('active');
+        this.render();
       },
 
       render(){
         const list=document.getElementById('cases-list');
         const empty=document.getElementById('cases-empty');
-        let items=this.data.slice();
-        const q=this.state.query;
+        const q=(this.state.query||'').toLowerCase().trim();
 
+        let items=[...this.data];
         if(q){
-          items=items.filter(i=>
+          items = items.filter(i=>
             (i.number||'').toLowerCase().includes(q) ||
             (i.debtor||'').toLowerCase().includes(q) ||
             (i.court||'').toLowerCase().includes(q) ||
@@ -239,7 +368,7 @@
           );
         }
 
-        // ❗ Архив скрыт по умолчанию
+        // По умолчанию архив скрыт
         if (this.state.filter === 'archived') {
           items = items.filter(i => i.status === 'archived');
         } else {
@@ -248,8 +377,13 @@
 
         items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (b.updatedAt||0)-(a.updatedAt||0));
 
-        if(!items.length){ list.innerHTML=''; empty.hidden=false; window.adjustBottomSpacer && window.adjustBottomSpacer(); return; }
-        empty.hidden=true;
+        if(!items.length){
+          list.innerHTML='';
+          empty.style.display='block';
+          window.adjustBottomSpacer && window.adjustBottomSpacer();
+          return;
+        }
+        empty.style.display='none';
 
         list.innerHTML=items.map(i=>`
           <article class="case-card" role="listitem" data-id="${i.id}">
@@ -262,10 +396,11 @@
               ${i.inn?`<span><strong>ИНН:</strong> ${i.inn}</span>`:''}
               ${i.court?`<span><strong>Суд:</strong> ${i.court}</span>`:''}
             </div>
-            ${i.note?`<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>`:''}
             <div class="case-actions">
-              <button class="ghost" onclick="CASES && CASES.toggleArchive('${i.id}')">${i.status==='active'?'Архивировать':'Вернуть в активные'}</button>
               <button class="ghost" onclick="CASES && CASES.edit('${i.id}')">Редактировать</button>
+              ${i.status==='active'
+                ? `<button class="ghost" onclick="CASES && CASES.archive('${i.id}', true)">В архив</button>`
+                : `<button class="ghost" onclick="CASES && CASES.archive('${i.id}', false)">Вернуть</button>`}
               <button class="ghost" onclick="CASES && CASES.remove('${i.id}')">Удалить</button>
             </div>
           </article>
@@ -278,8 +413,4 @@
     window.CASES.init();
   })();
   </script>
-
-  <img alt="" aria-hidden="true" style="display:none"
-       src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-       onload='(function(){var s=document.getElementById("cases-inline-js"); if(s){ new Function(s.textContent)(); }})();' />
 </section>

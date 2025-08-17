@@ -44,7 +44,15 @@
       if (!res.ok) throw new Error(`Не удалось загрузить ${url}: ${res.status}`);
       const html = await res.text();
       content.innerHTML = html;
-      window.scrollTo({ top: 0, behavior: 'instant' });
+      
+    // Централизованный запуск inline-скриптов страницы (type="text/plain")
+    try {
+      const scripts = content.querySelectorAll('script[type="text/plain"]');
+      scripts.forEach(node => { new Function(node.textContent)(); });
+    } catch (e) {
+      console.error('Inline script error:', e);
+    }
+window.scrollTo({ top: 0, behavior: 'auto' });
     } catch (err) {
       console.error(err);
       content.innerHTML = `
