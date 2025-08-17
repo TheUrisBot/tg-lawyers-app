@@ -127,3 +127,17 @@ html, body {
   height: 0;
   pointer-events: none;
 }
+/* Центровка пустых состояний на всех страницах (дела, задачи, заседания) */
+.cases-empty{
+  display: grid;
+  justify-items: center;   /* по горизонтали */
+  align-content: center;   /* по вертикали */
+  gap: 8px;
+  min-height: 40vh;        /* чтобы блок занимал заметную высоту и центрировался */
+  text-align: center;
+  color: var(--tg-theme-hint-color);
+}
+
+.cases-empty .emoji{ font-size: 40px; line-height: 1; }
+.cases-empty .title{ font-weight: 700; color: var(--tg-theme-text-color); }
+.cases-empty .hint{ max-width: 560px; }
