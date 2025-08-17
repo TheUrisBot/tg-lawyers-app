@@ -14,10 +14,10 @@
 
   <!-- Фильтры -->
   <div class="cases-filters" role="tablist" aria-label="Фильтр по типу">
-    <button role="tab" class="chip active" data-filter="all" onclick="TASKS && TASKS.setFilter('all')">Все</button>
-    <button role="tab" class="chip" data-filter="upcoming" onclick="TASKS && TASKS.setFilter('upcoming')">Предстоящие</button>
-    <button role="tab" class="chip" data-filter="overdue" onclick="TASKS && TASKS.setFilter('overdue')">Просроченные</button>
-    <button role="tab" class="chip" data-filter="archived" onclick="TASKS && TASKS.setFilter('archived')">Архив</button>
+    <button role="tab" class="chip active" data-filter="all" onclick="TASKS && TASKS.setFilter('all', this)">Все</button>
+    <button role="tab" class="chip" data-filter="upcoming" onclick="TASKS && TASKS.setFilter('upcoming', this)">Предстоящие</button>
+    <button role="tab" class="chip" data-filter="overdue" onclick="TASKS && TASKS.setFilter('overdue', this)">Просроченные</button>
+    <button role="tab" class="chip" data-filter="archived" onclick="TASKS && TASKS.setFilter('archived', this)">Архив</button>
   </div>
 
   <!-- Форма -->
@@ -32,7 +32,7 @@
         <!-- Комбинированная строка -->
         <label class="has-suggest" style="grid-column: 1 / -1;">
           <span>Дело (номер или должник)</span>
-          <input type="text" id="t-combo" placeholder="А40-12345/2025 или Иванов И.И. / ООО «Рога и Копыта»" autocomplete="off" />
+          <input type="text" id="t-combo" placeholder="А40-12345/2025 или Иванов И.И. / ООО «Ромашка»" autocomplete="off" />
           <div id="t-combo-suggest" class="suggest" role="listbox" hidden></div>
 
           <!-- скрытые поля -->
@@ -64,28 +64,64 @@
     </form>
   </div>
 
-  <!-- Календарь задач (как в hearings) -->
+  <!-- Календарь задач (взято из присланного файла, без изменений) -->
   <div id="tasks-calendar" class="cal" aria-label="Календарь задач (месяц)"></div>
 
-  <!-- Плашка выбранной даты -->
+  <!-- Плашка выбранной даты (как в присланном файле) -->
   <div id="tasks-day-chip" class="day-chip" hidden>
     <span id="tasks-day-label"></span>
     <button class="ghost small" onclick="TASKS && TASKS.clearSelectedDay()" aria-label="Сбросить выбранную дату">Сбросить</button>
   </div>
 
   <!-- Список -->
-  <div id="tasks-list" class="cases-list" role="list"></div>
-  <div class="list-spacer" aria-hidden="true"></div>
+  <div id="tasks-list" class="cases-list" role="list" aria-label="Список задач"></div>
 
-  <!-- Пустое -->
+  <!-- Пустое состояние -->
   <div id="tasks-empty" class="cases-empty" hidden>
-    <div class="emoji" aria-hidden="true">📝</div>
+    <div class="emoji">📝</div>
     <div class="title">Пока нет задач</div>
-    <div class="hint">Добавь первую задачу: название обязательно.</div>
-    <button class="primary" onclick="TASKS && TASKS.toggleForm(true)">Добавить задачу</button>
+    <div class="hint">Создайте первую задачу — привяжите к делу, выберите срок…</div>
+    <button class="primary" onclick="TASKS && TASKS.toggleForm(true)">Добавить</button>
+    <div class="list-spacer"></div>
   </div>
 
   <style>
+    /* ——— стили (оставлены как были), добавлен блок календаря из присланного файла ——— */
+
+    /* Календарь — как в присланном tasks.html */
+    .cal{ border:1px solid var(--separator); border-radius:16px; background:var(--tg-theme-secondary-bg-color); padding:10px; display:grid; gap:8px; margin-top:8px; }
+    .cal-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .cal-title{ font-weight:700; }
+    .cal-nav{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .cal-nav .navbtn,.cal-nav .ghost.small{ padding:6px 10px; border-radius:10px; border:1px solid var(--separator); background:transparent; cursor:pointer; color:var(--tg-theme-text-color); }
+    .cal-nav .navbtn:hover,.cal-nav .ghost.small:hover{ border-color:var(--app-accent); color:var(--app-accent); }
+    .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; color:var(--tg-theme-hint-color); font-size:12px; }
+    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-day{ position:relative; padding:10px 0; text-align:center; border-radius:10px; cursor:pointer; user-select:none; background:var(--tg-theme-bg-color); border:1px solid transparent; }
+    .cal-day.disabled{ opacity:.4; cursor:default; }
+    .cal-day.today{ outline:1px dashed var(--app-accent); }
+    .cal-day.selected{ border-color:var(--app-accent); box-shadow:0 0 0 1px var(--app-accent) inset; }
+    .cal-num{ font-weight:600; }
+    .cal-hint{ position:absolute; inset:2px; border-radius:8px; pointer-events:none; opacity:0; }
+    .cal-day.has-1{ border-color:var(--app-accent); }
+    .cal-day.has-3 .cal-hint{ background:var(--app-accent); opacity:.12; }
+    .cal-day.has-6 .cal-hint{ background:var(--app-accent); opacity:.22; }
+    .cal-day.has-10 .cal-hint{ background:var(--app-accent); opacity:.32; }
+
+    .day-chip{ display:flex; align-items:center; gap:8px; margin:6px 0 2px; color:var(--tg-theme-hint-color); }
+    .day-chip .small{ padding:6px 10px; border-radius:10px; }
+
+    .cases-list{ display:grid; gap:8px; margin-top:8px; }
+    .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
+      border-radius:16px; padding:12px; display:grid; gap:6px; }
+    .case-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .case-number{ font-weight:700; }
+    .badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--separator); color:var(--tg-theme-hint-color); }
+    .badge.active{ border-color:var(--app-accent); color:var(--app-accent); }
+    .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
+    .case-actions{ display:flex; gap:8px; margin-top:6px; }
+
+    /* формы и подсказки */
     .cases-toolbar{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
     .cases-search{ display:grid; grid-template-columns:1fr auto; gap:6px; }
     .cases-search input{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--separator);
@@ -121,82 +157,53 @@
     .suggest-item:hover, .suggest-item[aria-selected="true"]{ background:var(--tg-theme-secondary-bg-color); }
     .suggest-item .hint{ color:var(--tg-theme-hint-color); font-size:12px; }
 
-    /* Календарь — как в hearings */
-    .cal{ border:1px solid var(--separator); border-radius:16px; background:var(--tg-theme-secondary-bg-color); padding:10px; display:grid; gap:8px; margin-top:8px; }
-    .cal-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-    .cal-title{ font-weight:700; }
-    .cal-nav{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .cal-nav .navbtn,.cal-nav .ghost.small{ padding:6px 10px; border-radius:10px; border:1px solid var(--separator); background:transparent; cursor:pointer; color:var(--tg-theme-text-color); }
-    .cal-nav .navbtn:hover,.cal-nav .ghost.small:hover{ border-color:var(--app-accent); color:var(--app-accent); }
-    .cal-week{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; color:var(--tg-theme-hint-color); font-size:12px; }
-    .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-    .cal-day{ position:relative; padding:10px 0; text-align:center; border-radius:10px; cursor:pointer; user-select:none; background:var(--tg-theme-bg-color); border:1px solid transparent; }
-    .cal-day.disabled{ opacity:.4; cursor:default; }
-    .cal-day.today{ outline:1px dashed var(--app-accent); }
-    .cal-day.selected{ border-color:var(--app-accent); box-shadow:0 0 0 1px var(--app-accent) inset; }
-    .cal-num{ font-weight:600; }
-    .cal-hint{ position:absolute; inset:2px; border-radius:8px; pointer-events:none; opacity:0; }
-    .cal-day.has-1{ border-color:var(--app-accent); }
-    .cal-day.has-3 .cal-hint{ background:var(--app-accent); opacity:.12; }
-    .cal-day.has-6 .cal-hint{ background:var(--app-accent); opacity:.22; }
-    .cal-day.has-10 .cal-hint{ background:var(--app-accent); opacity:.32; }
-
-    .day-chip{ display:flex; align-items:center; gap:8px; margin:6px 0 2px; color:var(--tg-theme-hint-color); }
-    .day-chip .small{ padding:6px 10px; border-radius:10px; }
-
-    .cases-list{ display:grid; gap:8px; margin-top:8px; }
-    .case-card{ border:1px solid var(--separator); background:var(--tg-theme-secondary-bg-color);
-      border-radius:16px; padding:12px; display:grid; gap:6px; }
-    .case-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-    .case-number{ font-weight:700; }
-    .badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--separator); color:var(--tg-theme-hint-color); }
-    .badge.active{ color:var(--app-accent); border-color:var(--app-accent); }
-    .case-row{ display:flex; gap:10px; flex-wrap:wrap; color:var(--tg-theme-hint-color); font-size:14px; }
-    .case-actions{ display:flex; gap:8px; margin-top:6px; }
-
-    .cases-empty{ text-align:center; padding:20px 8px; color:var(--tg-theme-hint-color); }
-    .cases-empty .emoji{ font-size:36px; margin-bottom:8px; }
-    .cases-empty .title{ font-weight:700; color:var(--tg-theme-text-color); }
-    .list-spacer{ height:16px; }
-
     @media (max-width:520px){ .cases-form .grid{ grid-template-columns:1fr; } .suggest{ max-height:50vh; } }
   </style>
 
   <script type="text/plain" id="tasks-inline-js">
   (function(){
-    const DAY=24*60*60*1000;
-    function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
-    const nowTs=()=>Date.now();
-    function toTs(dt){ if(!dt) return NaN; const ts=Date.parse(dt); return isNaN(ts)?NaN:ts; }
-    function fmtDateTime(dt){ try{ const d=new Date(dt); return d.toLocaleString('ru-RU'); }catch(_){ return '—'; } }
-    function fmtDayLabel(s){ try{ const d=new Date(s); return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(_){return s;} }
-    function pad2(n){return n<10?'0'+n:''+n;}
-    function monthInfo(date){ const y=date.getFullYear(), m=date.getMonth(); const first=new Date(y,m,1), last=new Date(y,m+1,0); const dow=(first.getDay()+6)%7; return {y,m,daysInMonth:last.getDate(),startOffset:dow}; }
+    /* ===== утилиты дат ===== */
+    const DAY = 24*60*60*1000;
+    function pad2(n){ return (n<10?'0':'')+n; }
     function ymDate(y,m,d){ return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-    function fmtMonthTitle(date){ return date.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}); }
+    function fmtDateTime(dt){ try{ const d=new Date(dt); return d.toLocaleString('ru-RU'); }catch(_){ return '—'; } }
 
+    /* ===== индекс дел ===== */
     function loadCasesIndex(){
       try{
         const raw=localStorage.getItem('tl_cases_v1'); if(!raw) return [];
         const arr=JSON.parse(raw)||[]; const map=new Map();
-        arr.forEach(c=>{ if(!c||!c.number) return; const key=String(c.number).trim(); if(!map.has(key)) map.set(key,{number:key, debtor:c.debtor||''}); });
+        arr.forEach(c=>{
+          if(!c||!c.number) return;
+          const key=String(c.number||'').trim();
+          if(!map.has(key)) map.set(key,{ number:key, debtor:c.debtor||'' });
+          const x=map.get(key);
+          if(!x.debtor && c.debtor) x.debtor=c.debtor;
+        });
         return Array.from(map.values());
       }catch(_){ return []; }
     }
-    function parseComboToFields(text){
-      const s=(text||'').trim();
-      const caseRe = /[AА]\s*\d{1,3}[-–]\d{3,7}\/\d{2,4}/i;
-      const m = s.match(caseRe);
-      const number = m ? m[0].replace(/\s+/g,'').toUpperCase().replace('A','А') : '';
-      let debtor = s;
-      if (m) debtor = (s.slice(0, m.index) + s.slice(m.index + m[0].length)).replace(/[–—-]/g,' ').trim();
-      return { number, debtor };
+
+    /* ===== экранирование для подсказок (фикс кавычек) ===== */
+    function escAttr(s){
+      s = (s===undefined || s===null) ? '' : String(s);
+      return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function escText(s){
+      s = (s===undefined || s===null) ? '' : String(s);
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    /* --- Экранирование для подсказок (фикс кавычек) --- */
-    function escAttr(s){ s=(s===undefined||s===null)?'':String(s); return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function escText(s){ s=(s===undefined||s===null)?'':String(s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function setExpanded(btn, wrap, open){ btn?.setAttribute('aria-expanded', String(open)); wrap?.setAttribute('aria-hidden', String(!open)); }
 
+    /* ===== календарь из присланного файла ===== */
+    function monthInfo(date){
+      const y=date.getFullYear(), m=date.getMonth();
+      const first=new Date(y,m,1), last=new Date(y,m+1,0);
+      const dow=(first.getDay()+6)%7; // Пн=0
+      return {y,m,daysInMonth:last.getDate(),startOffset:dow};
+    }
+    function fmtMonthTitle(date){ return date.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}); }
     function buildCalendarHTML(state, counts){
       const ref=new Date(state.calendar.year, state.calendar.month, 1);
       const {y,m,daysInMonth,startOffset}=monthInfo(ref);
@@ -237,34 +244,137 @@
     }
 
     window.TASKS = {
-      LS_KEY:'tl_tasks_v1',
-      data:[],
-      casesIndex:[],
-      state:{ query:'', filter:'all', selectedDay:null, calendar:{ year:(new Date()).getFullYear(), month:(new Date()).getMonth() } },
-      editingId:null,
-
-      refreshCasesIndex(){ this.casesIndex=loadCasesIndex(); },
+      LS_KEY: 'tl_tasks_v1',
+      data: [],
+      state: {
+        query:'',
+        filter:'all',
+        selectedDay: null,
+        calendar: {year:(new Date()).getFullYear(), month:(new Date()).getMonth()}
+      },
+      casesIndex: [],
+      editingId: null,
 
       init(){
-        try{ const raw=localStorage.getItem(this.LS_KEY); this.data=raw?JSON.parse(raw):[]; if(!Array.isArray(this.data)) this.data=[]; }catch(e){ this.data=[]; }
-        this.refreshCasesIndex();
-        this.autoArchiveCompleted();
+        try{ this.data = JSON.parse(localStorage.getItem(this.LS_KEY)||'[]')||[]; }catch(e){ this.data=[]; }
+        this.casesIndex = loadCasesIndex();
+
+        const wrap=document.getElementById('tasks-form-wrap');
+        const btn=document.getElementById('tasks-add-btn');
+        setExpanded(btn, wrap, false);
+
         this.initComboSuggest();
-        this.render();
+        this.render(); // внутри render -> renderCalendar
       },
 
       save(){ localStorage.setItem(this.LS_KEY, JSON.stringify(this.data)); },
-      setQuery(v){ this.state.query=(v||'').toLowerCase(); this.render(); },
-      setFilter(f){
-        this.state.filter=f;
-        document.querySelectorAll('#tasks-page .chip').forEach(ch=>{
-          ch.classList.toggle('active', ch.dataset.filter===f);
-          ch.setAttribute('aria-selected', String(ch.dataset.filter===f));
+
+      refreshCasesIndex(){ this.casesIndex = loadCasesIndex(); },
+
+      /* ===== комбополе дела ===== */
+      initComboSuggest(){
+        const input=document.getElementById('t-combo');
+        const box=document.getElementById('t-combo-suggest');
+        const openWith=(q)=>{ this.refreshCasesIndex(); this.buildComboSuggestions(box, q); };
+
+        input.addEventListener('click', ()=>openWith(input.value));
+        input.addEventListener('input', ()=>openWith(input.value));
+        input.addEventListener('blur', ()=>setTimeout(()=>{ box.hidden=true; },120));
+
+        box.addEventListener('mousedown', (e)=>{
+          const item=e.target.closest('.suggest-item'); if(!item) return;
+          const number=item.getAttribute('data-number')||'';
+          const debtor=item.getAttribute('data-debtor')||'';
+          document.getElementById('t-case').value   = number;
+          document.getElementById('t-debtor').value = debtor;
+          input.value = number + (debtor ? ' — ' + debtor : '');
+          box.hidden=true;
         });
+      },
+      buildComboSuggestions($box, query){
+        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
+        let items=!q?list.slice(0,7):list.filter(c=> c.number.toLowerCase().includes(q) || (c.debtor||'').toLowerCase().includes(q) ).slice(0,7);
+        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
+        $box.innerHTML = items.map(c=>`
+          <div class="suggest-item" role="option"
+               data-number="${escAttr(c.number)}" data-debtor="${escAttr(c.debtor||'')}">
+            <span><strong>${escText(c.number)}</strong></span>
+            <span class="hint">${escText(c.debtor||'')}</span>
+          </div>`).join('');
+        $box.hidden=false;
+      },
+
+      /* ===== CRUD ===== */
+      edit(id){
+        const i=this.data.find(x=>x.id===id); if(!i) return; this.editingId=id;
+        document.getElementById('t-title').value=i.title||'';
+        document.getElementById('t-case').value=i.caseNumber||'';
+        document.getElementById('t-debtor').value=i.debtor||'';
+        document.getElementById('t-combo').value=(i.caseNumber||'')+(i.debtor?(' — '+i.debtor):'');
+        document.getElementById('t-due').value=i.due||'';
+        document.getElementById('t-note').value=i.note||'';
+        document.getElementById('t-status').value=i.status||'active';
+        document.getElementById('tasks-submit-btn').textContent='Обновить';
+        this.toggleForm(true);
+      },
+      cancelEdit(){
+        this.editingId=null;
+        document.getElementById('tasks-submit-btn').textContent='Сохранить';
+        ['t-title','t-combo','t-case','t-debtor','t-due','t-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        document.getElementById('t-status').value='active';
+      },
+      submit(ev){
+        ev.preventDefault();
+        const title=document.getElementById('t-title').value.trim();
+        const caseNumber=document.getElementById('t-case').value.trim();
+        const debtor=document.getElementById('t-debtor').value.trim();
+        const due=document.getElementById('t-due').value.trim();
+        const note=document.getElementById('t-note').value.trim();
+        const status=document.getElementById('t-status').value;
+
+        if(!title){ alert('Укажи название задачи'); return; }
+
+        const now=Date.now();
+        if(this.editingId){
+          const i=this.data.findIndex(x=>x.id===this.editingId);
+          if(i!==-1) this.data[i]={...this.data[i], title, caseNumber, debtor, due, note, status, updatedAt: now};
+        }else{
+          this.data.unshift({ id: crypto.randomUUID(), title, caseNumber, debtor, due, note, status, createdAt: now, updatedAt: now });
+        }
+
+        this.save();
+        this.cancelEdit();
+        this.render();
+        this.toggleForm(false);
+      },
+
+      /* ===== статусные действия (как ты просил) ===== */
+      markDone(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status='done'; it.updatedAt=Date.now(); this.save(); this.render(); },
+      restoreTask(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status='active'; it.updatedAt=Date.now(); this.save(); this.render(); },
+      archiveTask(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status='archived'; it.updatedAt=Date.now(); this.save(); this.render(); },
+
+      /* ===== фильтры/поиск ===== */
+      setQuery(q){ this.state.query=String(q||''); this.render(); },
+      setFilter(f, el){
+        this.state.filter=f;
+        document.querySelectorAll('.cases-filters .chip').forEach(b=>b.classList.remove('active'));
+        el?.classList.add('active');
         this.render();
       },
 
-      /* === Календарь === */
+      /* ===== календарь (как в присланном файле) ===== */
+      buildCountsForCalendar(){
+        const counts={};
+        const d=new Date(this.state.calendar.year,this.state.calendar.month,1);
+        const y=d.getFullYear(), m=d.getMonth(); const last=new Date(y,m+1,0); const daysInMonth=last.getDate();
+        for(let day=1; day<=daysInMonth; day++){ counts[ymDate(y,m,day)]=0; }
+        this.data.forEach(t=>{
+          if(t.status==='archived' || !t.due) return;
+          const datePart = t.due.slice(0,10); // YYYY-MM-DD
+          if(Object.hasOwn(counts, datePart)) counts[datePart]+=1;
+        });
+        return counts;
+      },
       jumpMonths(delta){
         const d=new Date(this.state.calendar.year,this.state.calendar.month,1); d.setMonth(d.getMonth()+delta);
         this.state.calendar.year=d.getFullYear(); this.state.calendar.month=d.getMonth(); this.render();
@@ -278,146 +388,52 @@
         if(chip) chip.hidden=true;
         this.render();
       },
-      buildCountsForCalendar(){
-        const counts={}; const d=new Date(this.state.calendar.year,this.state.calendar.month,1);
-        const y=d.getFullYear(), m=d.getMonth(); const last=new Date(y,m+1,0); const daysInMonth=last.getDate();
-        for(let day=1; day<=daysInMonth; day++){ counts[ymDate(y,m,day)]=0; }
-        this.data.forEach(t=>{
-          if(t.status==='archived' || !t.due) return;
-          const datePart = t.due.slice(0,10); // YYYY-MM-DD
-          if(Object.hasOwn(counts, datePart)) counts[datePart]+=1;
-        });
-        return counts;
-      },
       renderCalendar(){
         const cal=document.getElementById('tasks-calendar'); if(!cal) return;
-        const counts=this.buildCountsForCalendar(); cal.innerHTML=buildCalendarHTML(this.state, counts);
+        const counts=this.buildCountsForCalendar();
+        cal.innerHTML = buildCalendarHTML(this.state, counts);
+
         cal.querySelector('[data-cal-prev]')?.addEventListener('click',()=>this.jumpMonths(-1));
         cal.querySelector('[data-cal-next]')?.addEventListener('click',()=>this.jumpMonths(+1));
         cal.querySelector('[data-cal-today]')?.addEventListener('click',()=>this.gotoTodayMonth());
         cal.querySelectorAll('[data-cal-jump]').forEach(b=>b.addEventListener('click',()=>{ const n=parseInt((b.getAttribute('data-cal-jump')||'+1').replace('+',''),10); if(!isNaN(n)) this.jumpMonths(n); }));
+
         cal.querySelectorAll('.cal-day[data-date]').forEach(btn=>btn.addEventListener('click',()=>{
           const date=btn.getAttribute('data-date');
           this.state.selectedDay=date;
           const chip=document.getElementById('tasks-day-chip'); const label=document.getElementById('tasks-day-label');
-          if(chip && label){ label.textContent=fmtDayLabel(date); chip.hidden=false; }
+          if(chip && label){ label.textContent=new Date(date).toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'}); chip.hidden=false; }
           this.render();
         }));
       },
 
-      toggleForm(force){
-        const wrap=document.getElementById('tasks-form-wrap'); const btn=document.getElementById('tasks-add-btn');
-        const isOpen=wrap.classList.contains('open'); const shouldOpen=(typeof force==='boolean')?force:!isOpen; if(shouldOpen===isOpen) return;
-        wrap.style.overflow='hidden';
-        if(shouldOpen){
-          wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
-          document.getElementById('t-title').focus(); // подсказки не открываем автоматически
-        } else {
-          wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
-          setExpanded(btn,wrap,false);
-          wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); TASKS.cancelEdit(); },{once:true});
-        }
-      },
-
-      /* === КОМБО-ПОДСКАЗКИ === */
-      initComboSuggest(){
-        const input = document.getElementById('t-combo');
-        const box   = document.getElementById('t-combo-suggest');
-        if(!input || !box) return;
-
-        const openWith = (q)=>{ this.refreshCasesIndex(); this.buildComboSuggestions(box, q); };
-        input.addEventListener('click', ()=>openWith(input.value)); // только клик
-        input.addEventListener('input', ()=>openWith(input.value)); // и/или печать
-        input.addEventListener('blur', ()=>setTimeout(()=>{ box.hidden=true; },120));
-
-        box.addEventListener('mousedown', (e)=>{
-          const item = e.target.closest('.suggest-item'); if(!item) return;
-          const number = item.getAttribute('data-number')||'';
-          const debtor = item.getAttribute('data-debtor')||'';
-          document.getElementById('t-case').value   = number;
-          document.getElementById('t-debtor').value = debtor;
-          input.value = number + (debtor ? ' — ' + debtor : '');
-          box.hidden = true;
-        });
-      },
-      buildComboSuggestions($box, query){
-        const list=this.casesIndex||[]; const q=(query||'').toLowerCase().trim();
-        let items=!q?list.slice(0,7):list.filter(c=> c.number.toLowerCase().includes(q) || (c.debtor||'').toLowerCase().includes(q) ).slice(0,7);
-        if(!items.length){ $box.hidden=true; $box.innerHTML=''; return; }
-        // 🔧 фикс кавычек и спецсимволов
-        $box.innerHTML=items.map(c=>`
-          <div class="suggest-item" role="option" data-number="${escAttr(c.number)}" data-debtor="${escAttr(c.debtor||'')}">
-            <span><strong>${escText(c.number)}</strong></span>
-            <span class="hint">${escText(c.debtor||'')}</span>
-          </div>`).join('');
-        $box.hidden=false;
-      },
-
-      // CRUD
-      edit(id){
-        const i=this.data.find(x=>x.id===id); if(!i) return; this.editingId=id;
-        document.getElementById('t-title').value=i.title||'';
-        document.getElementById('t-case').value=i.caseNumber||'';
-        document.getElementById('t-debtor').value=i.debtor||'';
-        document.getElementById('t-combo').value=(i.caseNumber||'')+(i.debtor?(' — '+i.debtor):'');
-        document.getElementById('t-due').value=i.due||'';
-        document.getElementById('t-note').value=i.note||'';
-        document.getElementById('t-status').value=i.status||'active';
-        document.getElementById('tasks-submit-btn').textContent='Обновить';
-        const wrap=document.getElementById('tasks-form-wrap'); if(!wrap.classList.contains('open')) this.toggleForm(true);
-      },
-      cancelEdit(){ this.editingId=null; document.getElementById('tasks-submit-btn').textContent='Сохранить';
-        ['t-title','t-combo','t-case','t-debtor','t-due','t-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-        document.getElementById('t-status').value='active';
-      },
-      submit(ev){
-        ev.preventDefault();
-        const title=document.getElementById('t-title').value.trim();
-        let caseNumber=document.getElementById('t-case').value;
-        let debtor=document.getElementById('t-debtor').value;
-        const combo=document.getElementById('t-combo').value;
-        if(!title){ alert('Укажи название задачи.'); return; }
-        if(!caseNumber && combo){
-          const parsed=parseComboToFields(combo);
-          caseNumber=parsed.number;
-          debtor = debtor || parsed.debtor;
-          document.getElementById('t-case').value=caseNumber;
-          document.getElementById('t-debtor').value=debtor;
-        }
-        const due=document.getElementById('t-due').value;
-        const note=document.getElementById('t-note').value.trim();
-        const status=document.getElementById('t-status').value;
-
-        if(this.editingId){
-          const i=this.data.findIndex(x=>x.id===this.editingId);
-          if(i!==-1) this.data[i]={...this.data[i], title, caseNumber, debtor, due, note, status, updatedAt:Date.now()};
-        } else {
-          this.data.push({ id:String(Date.now()), title, caseNumber, debtor, due, note,
-            status: status||'active', createdAt:Date.now(), updatedAt:Date.now() });
-        }
-        this.save(); this.cancelEdit(); this.toggleForm(false); this.autoArchiveCompleted(); this.render();
-      },
-      markDone(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status='done'; it.updatedAt=Date.now(); this.save(); this.render(); },
-      toggleArchive(id){ const it=this.data.find(x=>x.id===id); if(!it) return; it.status=it.status==='archived'?'active':'archived'; it.updatedAt=Date.now(); this.save(); this.render(); },
-      remove(id){ if(!confirm('Удалить задачу?')) return; this.data=this.data.filter(x=>x.id!==id); this.save(); this.render(); },
-
-      // автоархив «выполнено» спустя 1 день
-      autoArchiveCompleted(){
-        const now=nowTs(); let dirty=false;
-        this.data.forEach(t=>{ if(t.status==='done'){ const upd=t.updatedAt||t.createdAt||0; if(now - upd >= DAY){ t.status='archived'; dirty=true; } }});
-        if(dirty) this.save();
-      },
-
-      // Рендер
-      isOverdue(t){ const ts=toTs(t.due); return !isNaN(ts) && ts < nowTs() && t.status!=='done' && t.status!=='archived'; },
-      isUpcoming(t){ const ts=toTs(t.due); return !isNaN(ts) && ts >= nowTs(); },
-
+      /* ===== список ===== */
       render(){
-        const list=document.getElementById('tasks-list'); const empty=document.getElementById('tasks-empty');
-        let items=this.data.slice(); const q=this.state.query;
+        const list=document.getElementById('tasks-list');
+        const empty=document.getElementById('tasks-empty');
+        const q=(this.state.query||'').toLowerCase().trim();
+
+        let items=[...this.data];
+
+        if(this.state.filter==='archived') items=items.filter(i=>i.status==='archived');
+        else if(this.state.filter==='overdue'){
+          items=items.filter(i=>{
+            if(i.status==='archived' || i.status==='done') return false;
+            if(!i.due) return false;
+            return new Date(i.due) < new Date();
+          });
+        }
+        else if(this.state.filter==='upcoming'){
+          items=items.filter(i=>{
+            if(i.status==='archived' || i.status==='done') return false;
+            if(!i.due) return false;
+            return new Date(i.due) >= new Date();
+          });
+        }
+        else items=items.filter(i=>i.status!=='archived');
 
         if(q){
-          items=items.filter(i =>
+          items = items.filter(i=>
             (i.title||'').toLowerCase().includes(q) ||
             (i.caseNumber||'').toLowerCase().includes(q) ||
             (i.debtor||'').toLowerCase().includes(q) ||
@@ -425,39 +441,42 @@
           );
         }
 
-        // фильтр по выбранному дню календаря
         if(this.state.selectedDay){
-          items = items.filter(i => (i.due||'').slice(0,10) === this.state.selectedDay);
+          items = items.filter(i=> (i.due||'').slice(0,10)===this.state.selectedDay);
         }
 
-        // ❗ Архив скрыт по умолчанию + пресеты
-        if (this.state.filter === 'archived') {
-          items = items.filter(i => i.status === 'archived');
-        } else if (this.state.filter === 'overdue') {
-          items = items.filter(i => i.status !== 'archived' && this.isOverdue(i));
-        } else if (this.state.filter === 'upcoming') {
-          items = items.filter(i => i.status !== 'archived' && this.isUpcoming(i));
-        } else {
-          items = items.filter(i => i.status !== 'archived'); // 'all'
-        }
-
-        items.sort((a,b)=>
-          (a.status==='archived')-(b.status==='archived') ||
-          (this.isOverdue(b)-this.isOverdue(a)) ||
-          (toTs(a.due)-toTs(b.due))
-        );
+        items.sort((a,b)=> (a.status==='archived')-(b.status==='archived') || (b.updatedAt||0)-(a.updatedAt||0));
 
         if(!items.length){
           list.innerHTML=''; empty.hidden=false; this.renderCalendar();
-          const chip=document.getElementById('tasks-day-chip'); if(chip) chip.hidden = !this.state.selectedDay;
-          window.adjustBottomSpacer&&window.adjustBottomSpacer(); return;
+          window.adjustBottomSpacer && window.adjustBottomSpacer(); return;
         }
         empty.hidden=true;
 
         list.innerHTML=items.map(i=>{
-          const dueStr=i.due?fmtDateTime(i.due):'—'; const overdue=this.isOverdue(i);
+          const dueStr=i.due?fmtDateTime(i.due):'—';
+          const overdue = i.due && new Date(i.due) < new Date() && i.status!=='done' && i.status!=='archived';
           const badge = i.status==='archived'?'Архив':(i.status==='done'?'Готово':(overdue?'Просрочено':'Активная'));
           const badgeCls = (i.status==='archived')?'':(i.status==='done'?'active':(overdue?'':'active'));
+
+          // Кнопки действий по твоим правилам
+          let actions = '';
+          if(i.status==='active'){
+            actions = `
+              <button class="ghost" onclick="TASKS && TASKS.markDone('${i.id}')">Выполнено</button>
+              <button class="ghost" onclick="TASKS && TASKS.edit('${i.id}')">Редактировать</button>
+              <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>`;
+          } else if(i.status==='done'){
+            actions = `
+              <button class="ghost" onclick="TASKS && TASKS.restoreTask('${i.id}')">Вернуть задачу</button>
+              <button class="ghost" onclick="TASKS && TASKS.archiveTask('${i.id}')">Архивировать</button>
+              <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>`;
+          } else { /* archived */
+            actions = `
+              <button class="ghost" onclick="TASKS && TASKS.restoreTask('${i.id}')">Вернуть</button>
+              <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>`;
+          }
+
           return `
             <article class="case-card" role="listitem" data-id="${i.id}">
               <div class="case-head">
@@ -471,25 +490,41 @@
               </div>
               ${i.note?`<div class="case-row"><span><strong>Примечание:</strong> ${i.note}</span></div>`:''}
               <div class="case-actions">
-                ${i.status!=='done' && i.status!=='archived' ? `<button class="ghost" onclick="TASKS && TASKS.markDone('${i.id}')">Отметить «Выполнено»</button>`:''}
-                <button class="ghost" onclick="TASKS && TASKS.edit('${i.id}')">Редактировать</button>
-                <button class="ghost" onclick="TASKS && TASKS.remove('${i.id}')">Удалить</button>
+                ${actions}
               </div>
             </article>
           `;
         }).join('');
 
         this.renderCalendar();
-        const chip=document.getElementById('tasks-day-chip'); if(chip) chip.hidden = !this.state.selectedDay;
         window.adjustBottomSpacer && window.adjustBottomSpacer();
+      },
+
+      toggleForm(force){
+        const wrap=document.getElementById('tasks-form-wrap');
+        const btn=document.getElementById('tasks-add-btn');
+        const isOpen=wrap.classList.contains('open');
+        const shouldOpen=(typeof force==='boolean')?force:!isOpen; if(shouldOpen===isOpen) return;
+        wrap.style.overflow='hidden';
+        if(shouldOpen){
+          wrap.classList.add('open'); wrap.style.maxHeight=wrap.scrollHeight+'px'; setExpanded(btn,wrap,true);
+          document.getElementById('t-title').focus();
+        } else {
+          wrap.style.maxHeight=wrap.scrollHeight+'px'; requestAnimationFrame(()=>{ wrap.style.maxHeight='0px'; });
+          setExpanded(btn,wrap,false);
+          wrap.addEventListener('transitionend',()=>{ wrap.classList.remove('open'); TASKS.cancelEdit(); },{once:true});
+        }
+      },
+
+      remove(id){
+        if(!confirm('Удалить задачу?')) return;
+        this.data=this.data.filter(x=>x.id!==id);
+        this.save();
+        this.render();
       }
     };
 
     window.TASKS.init();
   })();
   </script>
-
-  <img alt="" aria-hidden="true" style="display:none"
-       src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-       onload='(function(){var s=document.getElementById("tasks-inline-js"); if(s){ new Function(s.textContent)(); }})();' />
 </section>
